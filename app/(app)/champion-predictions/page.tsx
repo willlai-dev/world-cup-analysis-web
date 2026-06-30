@@ -8,7 +8,9 @@ import { TeamFlag } from '@/components/cards/TeamFlag';
 import { ChampionRankBar } from '@/components/charts/ChampionRankBar';
 import { AiReportCard } from '@/components/ai/AiReportCard';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
-import { PremiumOnly } from '@/components/auth/RoleGate';
+import { PremiumGate } from '@/components/auth/RoleGate';
+import { useAuth } from '@/features/auth/use-auth';
+import { COPY } from '@/lib/constants';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table';
 import { LoadingState, ErrorState, EmptyState } from '@/components/ui/states';
@@ -16,6 +18,7 @@ import { teamName, teamTierLabel, formatDateTime } from '@/lib/formatters';
 
 export default function ChampionPredictionsPage() {
   const query = useLatestChampionPrediction();
+  const { isPremium } = useAuth();
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,11 +26,15 @@ export default function ChampionPredictionsPage() {
         title="冠軍預測"
         description="AI 冠軍預測排行、國家評級與預測理由。"
         action={
-          <PremiumOnly>
-            <Button variant="outline" size="sm" disabled title="Phase 3 開放">
-              重新跑預測
-            </Button>
-          </PremiumOnly>
+          // PREMIUM-only. USER sees a disabled button that says it can't be used.
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title={isPremium ? 'Phase 3 開放' : COPY.forbidden}
+          >
+            {isPremium ? '重新跑預測' : '重新跑預測（高級會員）'}
+          </Button>
         }
       />
 
@@ -96,12 +103,12 @@ export default function ChampionPredictionsPage() {
           <AiReportCard title="最終 AI 報告" report={query.data.finalReport} />
 
           {/* Dual-model cross analysis & disagreement land in Phase 2/3. */}
-          <PremiumOnly>
+          <PremiumGate feature="雙模型交叉分析">
             <div className="grid gap-4 md:grid-cols-2">
               <AiReportCard title="NVIDIA 分析 A" report={query.data.nvidiaReport} />
               <AiReportCard title="Qwen 分析 B" report={query.data.qwenReport} />
             </div>
-          </PremiumOnly>
+          </PremiumGate>
 
           <DeepChatPlaceholder context="冠軍預測" />
         </>

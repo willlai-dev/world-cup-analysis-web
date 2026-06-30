@@ -21,10 +21,12 @@ export default function RegisterAdminPage() {
             submitLabel="建立 Admin"
             isPending={registerAdmin.isPending}
             error={registerAdmin.error}
-            onSubmit={(values) =>
-              registerAdmin.mutate(values, {
-                onSuccess: () => router.push(routes.admin.accounts),
-              })
+            onSubmit={({ email, password, displayName }) =>
+              // Drop `role` — register-admin always creates ADMIN and rejects extra fields.
+              registerAdmin.mutate(
+                { email, password, displayName },
+                { onSuccess: () => router.push(routes.admin.accounts) },
+              )
             }
           />
         </CardBody>

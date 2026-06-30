@@ -1,13 +1,20 @@
-import type { LocalRole, MatchStatus, PlayerPosition, TeamRatingTier } from '@/types/api';
+import type {
+  LocalRole,
+  MatchStage,
+  MatchStatus,
+  NewsCategory,
+  PlayerPosition,
+  TeamRatingTier,
+} from '@/types/api';
 
 export const BACKEND_API_URL =
   process.env.NEXT_PUBLIC_BACKEND_API_URL ?? 'http://localhost:3000/api';
 
 export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3001';
 
-// Session cookie name used only by the optional middleware/proxy presence check.
-// NOTE: not yet confirmed with the backend — middleware/proxy stays disabled until it is.
-export const SESSION_COOKIE_NAME = 'wc_session';
+// Session cookie name (backend uses HttpOnly JWT cookie `access_token`). Only used by
+// the optional middleware/proxy presence check, which stays disabled in Phase 1.
+export const SESSION_COOKIE_NAME = 'access_token';
 
 // Empty / error / state copy — sourced from 08_FRONTEND_PAGES_COMPONENTS_SPEC.md.
 export const COPY = {
@@ -36,6 +43,29 @@ export const MATCH_STATUSES: MatchStatus[] = [
   'FINISHED',
   'POSTPONED',
   'CANCELLED',
+];
+
+export const MATCH_STAGES: MatchStage[] = [
+  'GROUP',
+  'ROUND_OF_32',
+  'ROUND_OF_16',
+  'QUARTER_FINAL',
+  'SEMI_FINAL',
+  'THIRD_PLACE',
+  'FINAL',
+  'UNKNOWN',
+];
+
+export const NEWS_CATEGORIES: NewsCategory[] = [
+  'MATCH',
+  'PLAYER',
+  'INJURY',
+  'TRANSFER',
+  'TEAM',
+  'TACTIC',
+  'CONTROVERSY',
+  'TOURNAMENT',
+  'OTHER',
 ];
 
 export const PLAYER_POSITIONS: PlayerPosition[] = ['GK', 'DF', 'MF', 'FW', 'UNKNOWN'];

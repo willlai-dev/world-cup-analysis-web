@@ -7,6 +7,7 @@ import type {
   AiReport,
   MatchDetail,
   MatchPrediction,
+  MatchStage,
   MatchStatus,
   MatchSummary,
 } from '@/types/api';
@@ -15,7 +16,7 @@ export type MatchListParams = {
   page?: number;
   pageSize?: number;
   status?: MatchStatus | '';
-  stage?: string;
+  stage?: MatchStage | '';
   dateFrom?: string;
   dateTo?: string;
   teamId?: string;

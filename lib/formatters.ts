@@ -1,4 +1,4 @@
-import type { PlayerPosition, TeamRatingTier } from '@/types/api';
+import type { MatchStage, NewsCategory, PlayerPosition, TeamRatingTier } from '@/types/api';
 
 export function formatDateTime(value?: string | null): string {
   if (!value) return '—';
@@ -52,6 +52,39 @@ const TEAM_TIER_LABELS: Record<TeamRatingTier, string> = {
 export function teamTierLabel(tier?: TeamRatingTier | null): string {
   if (!tier) return '未評級';
   return TEAM_TIER_LABELS[tier] ?? tier;
+}
+
+const MATCH_STAGE_LABELS: Record<MatchStage, string> = {
+  GROUP: '小組賽',
+  ROUND_OF_32: '32 強',
+  ROUND_OF_16: '16 強',
+  QUARTER_FINAL: '八強',
+  SEMI_FINAL: '四強',
+  THIRD_PLACE: '季軍戰',
+  FINAL: '決賽',
+  UNKNOWN: '未定',
+};
+
+export function stageLabel(stage?: MatchStage | null): string {
+  if (!stage) return '未定';
+  return MATCH_STAGE_LABELS[stage] ?? stage;
+}
+
+const NEWS_CATEGORY_LABELS: Record<NewsCategory, string> = {
+  MATCH: '賽事',
+  PLAYER: '球員',
+  INJURY: '傷病',
+  TRANSFER: '轉會',
+  TEAM: '球隊',
+  TACTIC: '戰術',
+  CONTROVERSY: '爭議',
+  TOURNAMENT: '賽會',
+  OTHER: '其他',
+};
+
+export function newsCategoryLabel(category?: NewsCategory | null): string {
+  if (!category) return '—';
+  return NEWS_CATEGORY_LABELS[category] ?? category;
 }
 
 export function teamName(team: { nameZh?: string | null; nameEn: string }): string {

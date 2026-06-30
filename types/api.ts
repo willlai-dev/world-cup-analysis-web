@@ -1,5 +1,6 @@
-// Shared API types — mirrors worldcup_ai_frontend_agent_docs/03_FRONTEND_READONLY_API_CONTRACT.md.
-// Do not diverge from the backend contract.
+// Shared API types — mirrors docs/READONLY_API_CONTRACT.md (backend Phase 1, actual).
+// Do not diverge from the backend contract; do not add speculative request fields
+// (backend ValidationPipe uses forbidNonWhitelisted: true → extra fields 400).
 
 // ----- Envelope -----
 
@@ -28,29 +29,80 @@ export type PaginatedApiSuccess<T> = ApiSuccess<T[]> & {
   meta: { pagination: PaginationMeta };
 };
 
-// ----- Auth / User -----
+// ----- Enums (from contract section 4) -----
 
-// Backend returns only authenticated roles. GUEST is a frontend-local value.
 export type UserRole = 'USER' | 'PREMIUM' | 'ADMIN';
 export type LocalRole = 'GUEST' | UserRole;
 export type UserStatus = 'ACTIVE' | 'DISABLED';
 
+export type MatchStatus = 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'POSTPONED' | 'CANCELLED';
+export type MatchStage =
+  | 'GROUP'
+  | 'ROUND_OF_32'
+  | 'ROUND_OF_16'
+  | 'QUARTER_FINAL'
+  | 'SEMI_FINAL'
+  | 'THIRD_PLACE'
+  | 'FINAL'
+  | 'UNKNOWN';
+
+export type PlayerPosition = 'GK' | 'DF' | 'MF' | 'FW' | 'UNKNOWN';
+export type PlayerRatingTier = 'S' | 'A_PLUS' | 'A' | 'B_PLUS' | 'B' | 'C' | 'UNKNOWN';
+export type TeamRatingTier = 'S' | 'A' | 'B' | 'C' | 'UNKNOWN';
+export type PlayerRole = 'STARTER' | 'ROTATION' | 'SUBSTITUTE' | 'IMPACT_PLAYER' | 'UNKNOWN';
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+
+export type NewsCategory =
+  | 'MATCH'
+  | 'PLAYER'
+  | 'INJURY'
+  | 'TRANSFER'
+  | 'TEAM'
+  | 'TACTIC'
+  | 'CONTROVERSY'
+  | 'TOURNAMENT'
+  | 'OTHER';
+export type NewsTagType =
+  | 'TEAM'
+  | 'PLAYER'
+  | 'MATCH'
+  | 'TOPIC'
+  | 'INJURY'
+  | 'TACTIC'
+  | 'CONTROVERSY'
+  | 'TRANSFER'
+  | 'OTHER';
+export type TranslationStatus = 'NONE' | 'PENDING' | 'DONE' | 'FAILED';
+export type AiProvider = 'NVIDIA' | 'QWEN' | 'PROGRAM_RULE';
+export type AiReportStatus = 'PENDING' | 'DONE' | 'FAILED';
+export type JobStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
+
+// ----- User / Profile -----
+
+// UserDto — exactly what /auth/me and admin endpoints return.
 export type User = {
   id: string;
   email: string;
   displayName: string;
   role: UserRole;
   status: UserStatus;
-  // Optional profile fields surfaced by /users/me.
-  nickname?: string | null;
-  avatarUrl?: string | null;
-  bio?: string | null;
+  // NOTE: backend UserDto does NOT include createdAt today. Kept optional and
+  // null-safe so the admin table column degrades to "—" rather than depending on it.
   createdAt?: string | null;
 };
 
-// ----- Domain entities -----
+export type UserProfile = {
+  nickname: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+};
 
-export type TeamRatingTier = 'S' | 'A' | 'B' | 'C' | 'UNKNOWN';
+// MeDto — returned by GET/PATCH /users/me. Profile is nested (or null).
+export type MeDto = User & {
+  profile: UserProfile | null;
+};
+
+// ----- Domain entities -----
 
 export type TeamSummary = {
   id: string;
@@ -61,6 +113,7 @@ export type TeamSummary = {
   groupName?: string | null;
   coachName?: string | null;
   flagUrl?: string | null;
+  worldRanking?: number | null;
   ratingTier?: TeamRatingTier;
   championScore?: number | null;
   formScore?: number | null;
@@ -70,14 +123,10 @@ export type TeamSummary = {
   statusScore?: number | null;
 };
 
-export type PlayerPosition = 'GK' | 'DF' | 'MF' | 'FW' | 'UNKNOWN';
-export type PlayerRatingTier = 'S' | 'A_PLUS' | 'A' | 'B_PLUS' | 'B' | 'C' | 'UNKNOWN';
-export type PlayerRole = 'STARTER' | 'ROTATION' | 'SUBSTITUTE' | 'IMPACT_PLAYER' | 'UNKNOWN';
-export type InjuryRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
-
 export type PlayerSummary = {
   id: string;
   teamId: string;
+  // Present on /players, /players/:id, favorites, home; ABSENT on /teams/:id/players.
   team?: TeamSummary;
   nameEn: string;
   nameZh?: string | null;
@@ -93,16 +142,14 @@ export type PlayerSummary = {
   physicalScore?: number | null;
   formScore?: number | null;
   role?: PlayerRole;
-  injuryRiskLevel?: InjuryRiskLevel;
+  injuryRiskLevel?: RiskLevel;
 };
-
-export type MatchStatus = 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'POSTPONED' | 'CANCELLED';
 
 export type MatchSummary = {
   id: string;
   homeTeam: TeamSummary;
   awayTeam: TeamSummary;
-  stage: string;
+  stage: MatchStage;
   groupName?: string | null;
   stadium?: string | null;
   kickoffAt: string;
@@ -110,26 +157,25 @@ export type MatchSummary = {
   homeScore?: number | null;
   awayScore?: number | null;
   sourceUpdatedAt?: string | null;
+  // SPEC_MISMATCH: never populated by current backend; treat as effectively null.
   aiSummary?: string | null;
 };
 
+// MatchEventDto — field names per contract (eventType, playerId, extraMinute).
 export type MatchEvent = {
   id: string;
-  minute?: number | null;
-  type: string;
-  teamId?: string | null;
-  playerName?: string | null;
-  description?: string | null;
+  minute: number | null;
+  extraMinute: number | null;
+  eventType: string; // free-form string, not an enum
+  teamId: string | null;
+  playerId: string | null;
+  description: string | null;
 };
 
+// MatchDetailDto = MatchSummary & { events }. No keyPlayers / reports.
 export type MatchDetail = MatchSummary & {
-  events?: MatchEvent[];
-  keyPlayers?: PlayerSummary[];
-  reports?: AiReport[];
+  events: MatchEvent[];
 };
-
-export type AiProvider = 'NVIDIA' | 'QWEN' | 'PROGRAM_RULE';
-export type AiReportStatus = 'PENDING' | 'DONE' | 'FAILED';
 
 export type AiReport = {
   id: string;
@@ -160,19 +206,7 @@ export type MatchPrediction = {
   sourceUpdatedAt?: string | null;
 };
 
-export type TeamDetail = TeamSummary & {
-  analysis?: AiReport | null;
-  recentMatches?: MatchSummary[];
-  keyPlayers?: PlayerSummary[];
-};
-
-export type PlayerDetail = PlayerSummary & {
-  relatedNews?: NewsSummary[];
-  analysis?: AiReport | null;
-};
-
-export type NewsTag = { id: string; name: string; type: string };
-export type TranslationStatus = 'NONE' | 'PENDING' | 'DONE' | 'FAILED';
+export type NewsTag = { id: string; name: string; type: NewsTagType };
 
 export type NewsSummary = {
   id: string;
@@ -183,15 +217,17 @@ export type NewsSummary = {
   summaryEn?: string | null;
   summaryZh?: string | null;
   publishedAt?: string | null;
-  category?: string | null;
+  category?: NewsCategory | null;
   tags?: NewsTag[];
   translationStatus?: TranslationStatus;
 };
 
+// NewsDetailDto = NewsSummary & { contentSnippet, translatedContentZh, language, fetchedAt }.
 export type NewsDetail = NewsSummary & {
-  contentSnippet?: string | null;
-  translatedContentZh?: string | null;
-  relatedEntities?: { teams?: TeamSummary[]; players?: PlayerSummary[] };
+  contentSnippet: string | null;
+  translatedContentZh: string | null;
+  language: string | null;
+  fetchedAt: string | null;
 };
 
 export type ChampionPredictionEntry = {
@@ -206,11 +242,9 @@ export type ChampionPredictionEntry = {
   aiComment?: string | null;
 };
 
-export type ChampionRunStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
-
 export type ChampionPredictionResponse = {
   runId: string;
-  status: ChampionRunStatus;
+  status: JobStatus;
   createdAt: string;
   completedAt?: string | null;
   entries: ChampionPredictionEntry[];
@@ -241,15 +275,16 @@ export type FavoritesResponse = {
   players: PlayerSummary[];
 };
 
-// Favorite mutations may return the full FavoritesResponse or a bare ok flag.
+// Favorite mutations always return { success: true } today; tolerate FavoritesResponse too.
 export type FavoriteMutationResponse = FavoritesResponse | { success: true };
 
 export type LoginResponse = {
   user: User;
-  redirectPath: '/matches' | '/admin/accounts';
+  // Backend types this as a plain string; current values: /matches | /admin/accounts.
+  redirectPath: string;
 };
 
-// ----- Request payloads -----
+// ----- Request payloads (only contract-whitelisted fields) -----
 
 export type RegisterRequest = {
   email: string;
@@ -271,6 +306,13 @@ export type AdminCreateUserRequest = {
   password: string;
   displayName: string;
   role: UserRole;
+};
+
+// register-admin does NOT accept a role field (always creates ADMIN).
+export type AdminRegisterAdminRequest = {
+  email: string;
+  password: string;
+  displayName: string;
 };
 
 export type AdminUpdateRoleRequest = { role: UserRole };

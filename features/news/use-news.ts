@@ -3,12 +3,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { apiData } from '@/lib/api-client';
 import { cleanParams, fetchList } from '@/lib/list';
-import type { NewsDetail, NewsSummary } from '@/types/api';
+import type { NewsCategory, NewsDetail, NewsSummary } from '@/types/api';
 
 export type NewsListParams = {
   page?: number;
   pageSize?: number;
-  category?: string;
+  category?: NewsCategory | '';
   tag?: string;
   teamId?: string;
   playerId?: string;

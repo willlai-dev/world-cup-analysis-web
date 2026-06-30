@@ -14,8 +14,10 @@ export function login(body: LoginRequest): Promise<LoginResponse> {
   return apiData<LoginResponse>('/auth/login', { method: 'POST', body });
 }
 
-export function register(body: RegisterRequest): Promise<User> {
-  return apiData<User>('/auth/register', { method: 'POST', body });
+export async function register(body: RegisterRequest): Promise<User> {
+  // Contract: POST /auth/register success data is { user: UserDto }, not UserDto.
+  const { user } = await apiData<{ user: User }>('/auth/register', { method: 'POST', body });
+  return user;
 }
 
 export function logout(): Promise<unknown> {

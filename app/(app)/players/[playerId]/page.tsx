@@ -1,11 +1,10 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { usePlayer } from '@/features/players/use-players';
+import { usePlayer, usePlayerAnalysis, usePlayerRating } from '@/features/players/use-players';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { FavoriteButton } from '@/components/cards/FavoriteButton';
-import { NewsCard } from '@/components/cards/NewsCard';
 import { AiReportCard } from '@/components/ai/AiReportCard';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
 import { AbilityMeter } from '@/components/charts/AbilityMeter';
@@ -15,6 +14,8 @@ import { playerName, positionLabel, teamName } from '@/lib/formatters';
 export default function PlayerDetailPage() {
   const { playerId } = useParams<{ playerId: string }>();
   const player = usePlayer(playerId);
+  const rating = usePlayerRating(playerId);
+  const analysis = usePlayerAnalysis(playerId);
 
   if (player.isLoading) return <LoadingState />;
   if (player.isError) return <ErrorState error={player.error} onRetry={() => player.refetch()} />;
@@ -61,20 +62,9 @@ export default function PlayerDetailPage() {
         </CardBody>
       </Card>
 
-      <AiReportCard title="AI 球員分析" report={p.analysis} />
+      <AiReportCard title="AI 球員評級" report={rating.data} isLoading={rating.isLoading} />
 
-      {p.relatedNews && p.relatedNews.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>相關新聞</CardTitle>
-          </CardHeader>
-          <CardBody className="grid gap-4 sm:grid-cols-2">
-            {p.relatedNews.map((news) => (
-              <NewsCard key={news.id} news={news} />
-            ))}
-          </CardBody>
-        </Card>
-      )}
+      <AiReportCard title="AI 球員分析" report={analysis.data} isLoading={analysis.isLoading} />
 
       <DeepChatPlaceholder context={playerName(p)} />
     </div>

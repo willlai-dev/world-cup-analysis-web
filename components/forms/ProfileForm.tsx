@@ -7,9 +7,9 @@ import { useUpdateProfile } from '@/features/users/use-profile';
 import { ApiError } from '@/lib/api-client';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import type { User } from '@/types/api';
+import type { MeDto } from '@/types/api';
 
-export function ProfileForm({ user }: { user: User }) {
+export function ProfileForm({ user }: { user: MeDto }) {
   const update = useUpdateProfile();
 
   const {
@@ -20,8 +20,9 @@ export function ProfileForm({ user }: { user: User }) {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       displayName: user.displayName,
-      nickname: user.nickname ?? '',
-      bio: user.bio ?? '',
+      // Profile fields are nested under `profile` (or null) in MeDto.
+      nickname: user.profile?.nickname ?? '',
+      bio: user.profile?.bio ?? '',
     },
   });
 

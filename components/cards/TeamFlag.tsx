@@ -1,6 +1,20 @@
+
 /* eslint-disable @next/next/no-img-element */
+'use client';
+
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { fifaCodeToFlagUrl } from '@/lib/flags';
 import type { TeamSummary } from '@/types/api';
+
+/**
+ * Extract a potential FIFA code from a bare flagUrl like "bra.svg" → "BRA".
+ * Returns null if the URL doesn't match the expected pattern.
+ */
+function codeFromFlagUrl(flagUrl: string): string | null {
+  const match = flagUrl.match(/(?:^|[/\\])([a-zA-Z]{2,4})\.(?:svg|png|jpg|webp)$/i);
+  return match ? match[1].toUpperCase() : null;
+}
 
 export function TeamFlag({
   team,
@@ -11,18 +25,30 @@ export function TeamFlag({
   size?: number;
   className?: string;
 }) {
-  if (team.flagUrl) {
+  const [imgError, setImgError] = useState(false);
+
+  // Resolve a FIFA/country code from fifaCode first, then try to extract it
+  // from the bare flagUrl filename (e.g. "bra.svg" → "BRA").
+  const code =
+    team.fifaCode ??
+    (team.flagUrl ? codeFromFlagUrl(team.flagUrl) : null);
+
+  const src = !imgError && code ? fifaCodeToFlagUrl(code) : null;
+
+  if (src) {
     return (
       <img
-        src={team.flagUrl}
+        src={src}
         alt={`${team.nameEn} flag`}
         width={size}
         height={size}
+        onError={() => setImgError(true)}
         className={cn('inline-block rounded-sm object-cover', className)}
         style={{ width: size, height: size }}
       />
     );
   }
+
   return (
     <span
       aria-hidden
@@ -32,7 +58,7 @@ export function TeamFlag({
       )}
       style={{ width: size, height: size }}
     >
-      {team.fifaCode ?? team.nameEn.slice(0, 3).toUpperCase()}
+      {code?.slice(0, 3) ?? team.nameEn.slice(0, 3).toUpperCase()}
     </span>
   );
 }

@@ -15,8 +15,10 @@ export function useUpdateProfile() {
   const setUser = useAuthStore((s) => s.setUser);
   return useMutation({
     mutationFn: updateProfile,
-    onSuccess: (user) => {
-      queryClient.setQueryData(profileKey, user);
+    onSuccess: (me) => {
+      queryClient.setQueryData(profileKey, me);
+      // /auth/me holds a plain UserDto; strip the nested profile before caching it.
+      const { profile: _profile, ...user } = me;
       queryClient.setQueryData(['auth', 'me'], user);
       setUser(user);
     },

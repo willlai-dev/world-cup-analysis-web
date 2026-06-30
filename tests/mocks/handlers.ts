@@ -1,9 +1,9 @@
 import { http, HttpResponse } from 'msw';
 import {
-  adminUserList,
   championFixture,
   homeHighlightsFixture,
   matchFixtures,
+  meFixture,
   newsFixtures,
   playerFixtures,
   teamFixtures,
@@ -45,16 +45,19 @@ export const handlers = [
   http.get(`${API}/teams/:id`, () => ok(teamFixtures[0])),
   http.get(`${API}/teams/:id/players`, () => ok(playerFixtures)),
   http.get(`${API}/teams/:id/matches`, () => ok(matchFixtures)),
+  http.get(`${API}/teams/:id/analysis`, () => ok(null)),
 
   http.get(`${API}/players`, () => paginated(playerFixtures)),
   http.get(`${API}/players/:id`, () => ok(playerFixtures[0])),
+  http.get(`${API}/players/:id/analysis`, () => ok(null)),
+  http.get(`${API}/players/:id/rating`, () => ok(null)),
 
   http.get(`${API}/news`, () => paginated(newsFixtures)),
   http.get(`${API}/news/:id`, () => ok(newsFixtures[0])),
 
   http.get(`${API}/champion-predictions/latest`, () => ok(championFixture)),
 
-  http.get(`${API}/users/me`, () => ok(userFixtures.user)),
+  http.get(`${API}/users/me`, () => ok(meFixture)),
   http.get(`${API}/users/me/favorites`, () => ok({ teams: [], players: [] })),
 
   // Admin endpoints default to 403 for the default USER session.

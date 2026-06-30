@@ -5,10 +5,10 @@ import { useNewsItem } from '@/features/news/use-news';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { PremiumOnly } from '@/components/auth/RoleGate';
+import { PremiumGate } from '@/components/auth/RoleGate';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
 import { LoadingState, ErrorState } from '@/components/ui/states';
-import { formatDateTime } from '@/lib/formatters';
+import { formatDateTime, newsCategoryLabel } from '@/lib/formatters';
 
 export default function NewsDetailPage() {
   const { newsId } = useParams<{ newsId: string }>();
@@ -32,7 +32,7 @@ export default function NewsDetailPage() {
           {n.titleZh && <p className="text-lg text-slate-700">{n.titleZh}</p>}
 
           <div className="flex flex-wrap items-center gap-1.5">
-            {n.category && <Badge tone="brand">{n.category}</Badge>}
+            {n.category && <Badge tone="brand">{newsCategoryLabel(n.category)}</Badge>}
             {(n.tags ?? []).map((tag) => (
               <Badge key={tag.id} tone="neutral">
                 {tag.name}
@@ -60,8 +60,8 @@ export default function NewsDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Translation is PREMIUM-only and wired in Phase 2. */}
-      <PremiumOnly>
+      {/* Translation is PREMIUM-only and wired in Phase 2; USER sees a can't-use notice. */}
+      <PremiumGate feature="新聞翻譯">
         <Card data-testid="translation-panel">
           <CardHeader className="flex items-center justify-between">
             <CardTitle>繁體中文翻譯</CardTitle>
@@ -76,7 +76,7 @@ export default function NewsDetailPage() {
             </Button>
           </CardBody>
         </Card>
-      </PremiumOnly>
+      </PremiumGate>
 
       <DeepChatPlaceholder context={n.titleEn} />
     </div>

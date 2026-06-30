@@ -15,7 +15,7 @@ import { AiReportCard } from '@/components/ai/AiReportCard';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
 import { ScoreBar } from '@/components/charts/ScoreBar';
 import { LoadingState, ErrorState } from '@/components/ui/states';
-import { formatDateTime, formatScore, teamName } from '@/lib/formatters';
+import { formatDateTime, formatScore, stageLabel, teamName } from '@/lib/formatters';
 
 export default function MatchDetailPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -37,7 +37,7 @@ export default function MatchDetailPage() {
         <CardBody className="flex flex-col gap-4">
           <div className="flex items-center justify-between text-sm text-slate-500">
             <span>
-              {m.stage}
+              {stageLabel(m.stage)}
               {m.groupName ? ` · ${m.groupName}` : ''}
             </span>
             <Badge tone="neutral">{m.status}</Badge>
@@ -93,22 +93,6 @@ export default function MatchDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Key Players */}
-      {m.keyPlayers && m.keyPlayers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>關鍵球員</CardTitle>
-          </CardHeader>
-          <CardBody className="flex flex-wrap gap-2">
-            {m.keyPlayers.map((p) => (
-              <Badge key={p.id} tone="brand">
-                {teamName({ nameEn: p.nameEn, nameZh: p.nameZh })}
-              </Badge>
-            ))}
-          </CardBody>
-        </Card>
-      )}
-
       {/* Events Timeline */}
       {m.events && m.events.length > 0 && (
         <Card>
@@ -119,12 +103,11 @@ export default function MatchDetailPage() {
             <ul className="flex flex-col gap-2 text-sm text-slate-700">
               {m.events.map((ev) => (
                 <li key={ev.id} className="flex gap-3">
-                  <span className="w-10 text-right font-mono text-slate-400">
-                    {ev.minute != null ? `${ev.minute}'` : '—'}
+                  <span className="w-12 text-right font-mono text-slate-400">
+                    {ev.minute != null ? `${ev.minute}${ev.extraMinute ? `+${ev.extraMinute}` : ''}'` : '—'}
                   </span>
                   <span>
-                    {ev.type}
-                    {ev.playerName ? ` · ${ev.playerName}` : ''}
+                    {ev.eventType}
                     {ev.description ? ` — ${ev.description}` : ''}
                   </span>
                 </li>

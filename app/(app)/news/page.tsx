@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import { useNewsList, type NewsListParams } from '@/features/news/use-news';
-import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
+import { DEFAULT_PAGE_SIZE, NEWS_CATEGORIES } from '@/lib/constants';
+import { newsCategoryLabel } from '@/lib/formatters';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { NewsCard } from '@/components/cards/NewsCard';
 import { Pagination } from '@/components/ui/Pagination';
 import { ListSkeleton, ErrorState, EmptyState } from '@/components/ui/states';
+import type { NewsCategory } from '@/types/api';
 
 export default function NewsPage() {
   const [filters, setFilters] = useState<NewsListParams>({
@@ -29,11 +32,12 @@ export default function NewsPage() {
       <PageHeading title="新聞" description="英文新聞來源的 AI 摘要、分類與標籤。" />
 
       <FilterBar>
-        <Input
+        <Select
           label="分類"
-          placeholder="例如：傷病"
+          placeholder="全部分類"
+          options={NEWS_CATEGORIES.map((c) => ({ label: newsCategoryLabel(c), value: c }))}
           value={filters.category ?? ''}
-          onChange={(e) => update({ category: e.target.value })}
+          onChange={(e) => update({ category: e.target.value as NewsCategory | '' })}
         />
         <Input
           label="標籤"

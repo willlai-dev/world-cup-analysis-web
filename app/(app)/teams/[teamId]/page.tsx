@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useTeam, useTeamPlayers, useTeamMatches } from '@/features/teams/use-teams';
+import { useTeam, useTeamAnalysis, useTeamPlayers, useTeamMatches } from '@/features/teams/use-teams';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFlag } from '@/components/cards/TeamFlag';
@@ -17,6 +17,7 @@ import { teamName, teamTierLabel } from '@/lib/formatters';
 export default function TeamDetailPage() {
   const { teamId } = useParams<{ teamId: string }>();
   const team = useTeam(teamId);
+  const analysis = useTeamAnalysis(teamId);
   const players = useTeamPlayers(teamId);
   const matches = useTeamMatches(teamId);
 
@@ -61,7 +62,7 @@ export default function TeamDetailPage() {
         </CardBody>
       </Card>
 
-      <AiReportCard title="AI 國家隊分析" report={t.analysis} />
+      <AiReportCard title="AI 國家隊分析" report={analysis.data} isLoading={analysis.isLoading} />
 
       <Card>
         <CardHeader>

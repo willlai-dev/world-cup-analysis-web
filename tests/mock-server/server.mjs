@@ -1,6 +1,7 @@
-// Minimal mock backend for E2E. Serves the 03 API contract on :3000 with the
-// /api prefix so BOTH the Next server (getServerUser) and the browser hit it.
-// Auth is cookie-based: login sets `wc_session=<role>`; /auth/me reads it.
+// Minimal mock backend for E2E. Serves the API contract on :3000 with the /api
+// prefix so BOTH the Next server (getServerUser) and the browser hit it.
+// Auth is cookie-based: login sets `access_token=<role>`; /auth/me reads it.
+// (Real backend stores a JWT here; the mock stores the role for simplicity.)
 import { createServer } from 'node:http';
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 3000);
@@ -22,13 +23,16 @@ const players = [
 ];
 
 const matches = [
-  { id: 'match-1', homeTeam: teams[0], awayTeam: teams[1], stage: '小組賽', groupName: 'A', stadium: 'Lusail', kickoffAt: '2026-06-15T18:00:00.000Z', status: 'SCHEDULED', aiSummary: '頂級對決。' },
-  { id: 'match-2', homeTeam: teams[1], awayTeam: teams[0], stage: '小組賽', groupName: 'A', kickoffAt: '2026-06-10T15:00:00.000Z', status: 'FINISHED', homeScore: 2, awayScore: 1, aiSummary: '逆轉取勝。' },
+  { id: 'match-1', homeTeam: teams[0], awayTeam: teams[1], stage: 'GROUP', groupName: 'A', stadium: 'Lusail', kickoffAt: '2026-06-15T18:00:00.000Z', status: 'SCHEDULED', aiSummary: null },
+  { id: 'match-2', homeTeam: teams[1], awayTeam: teams[0], stage: 'GROUP', groupName: 'A', kickoffAt: '2026-06-10T15:00:00.000Z', status: 'FINISHED', homeScore: 2, awayScore: 1, aiSummary: null },
 ];
 
 const news = [
-  { id: 'news-1', sourceName: 'The Guardian', sourceUrl: 'https://example.com/n1', titleEn: 'France name strong squad', titleZh: '法國公布名單', summaryEn: 'Strong squad.', summaryZh: '實力堅強。', publishedAt: '2026-06-01T09:00:00.000Z', category: '陣容', tags: [{ id: 't1', name: 'France', type: 'TEAM' }], translationStatus: 'NONE' },
+  { id: 'news-1', sourceName: 'The Guardian', sourceUrl: 'https://example.com/n1', titleEn: 'France name strong squad', titleZh: '法國公布名單', summaryEn: 'Strong squad.', summaryZh: '實力堅強。', publishedAt: '2026-06-01T09:00:00.000Z', category: 'TEAM', tags: [{ id: 't1', name: 'France', type: 'TEAM' }], translationStatus: 'NONE' },
 ];
+
+const newsDetail = { ...news[0], contentSnippet: 'snippet', translatedContentZh: null, language: 'en', fetchedAt: '2026-06-01T09:00:00.000Z' };
+const me = { ...users.USER, profile: { nickname: '小明', avatarUrl: null, bio: '世足愛好者' } };
 
 const champion = {
   runId: 'run-1', status: 'DONE', createdAt: '2026-06-01T00:00:00.000Z', completedAt: '2026-06-01T00:05:00.000Z',
@@ -63,7 +67,7 @@ function send(res, status, body, extraHeaders = {}) {
 
 function roleFromCookie(req) {
   const cookie = req.headers.cookie ?? '';
-  const match = cookie.match(/wc_session=(USER|PREMIUM|ADMIN)/);
+  const match = cookie.match(/access_token=(USER|PREMIUM|ADMIN)/);
   return match ? match[1] : null;
 }
 
@@ -95,7 +99,7 @@ const server = createServer(async (req, res) => {
     const role = email.includes('admin') ? 'ADMIN' : email.includes('premium') ? 'PREMIUM' : 'USER';
     const redirectPath = role === 'ADMIN' ? '/admin/accounts' : '/matches';
     return send(res, 200, ok({ user: users[role], redirectPath }), {
-      'Set-Cookie': `wc_session=${role}; Path=/; HttpOnly; SameSite=Lax`,
+      'Set-Cookie': `access_token=${role}; Path=/; HttpOnly; SameSite=Lax`,
     });
   }
   if (path === '/auth/register' && method === 'POST') {
@@ -103,7 +107,7 @@ const server = createServer(async (req, res) => {
   }
   if (path === '/auth/logout' && method === 'POST') {
     return send(res, 200, ok({ success: true }), {
-      'Set-Cookie': 'wc_session=; Path=/; HttpOnly; Max-Age=0',
+      'Set-Cookie': 'access_token=; Path=/; HttpOnly; Max-Age=0',
     });
   }
   if (path === '/auth/me' && method === 'GET') {
@@ -153,24 +157,29 @@ const server = createServer(async (req, res) => {
     return send(res, role === 'ADMIN' ? 403 : 401, errBody(role === 'ADMIN' ? 'FORBIDDEN' : 'UNAUTHORIZED', '無權限'));
   }
 
-  if (path === '/users/me') return send(res, 200, ok(users[role]));
+  if (path === '/users/me' && method === 'GET') return send(res, 200, ok(me));
+  if (path === '/users/me' && method === 'PATCH') return send(res, 200, ok(me));
   if (path === '/users/me/favorites') return send(res, 200, ok({ teams: [], players: [] }));
   if (path.startsWith('/favorites/')) return send(res, 200, ok({ success: true }));
 
   if (path === '/matches') return send(res, 200, paginated(matches));
-  if (/^\/matches\/[^/]+$/.test(path)) return send(res, 200, ok({ ...matches[0], events: [], keyPlayers: [] }));
   if (/^\/matches\/[^/]+\/(analysis|prediction|post-match-report)$/.test(path)) return send(res, 200, ok(null));
+  if (/^\/matches\/[^/]+$/.test(path)) return send(res, 200, ok({ ...matches[0], events: [] }));
 
   if (path === '/teams') return send(res, 200, paginated(teams));
-  if (/^\/teams\/[^/]+$/.test(path)) return send(res, 200, ok(teams[0]));
-  if (/^\/teams\/[^/]+\/players$/.test(path)) return send(res, 200, ok(players));
+  // /teams/:id/players omits nested team (per contract). JSON.stringify drops undefined.
+  if (/^\/teams\/[^/]+\/players$/.test(path))
+    return send(res, 200, ok(players.map((p) => ({ ...p, team: undefined }))));
   if (/^\/teams\/[^/]+\/matches$/.test(path)) return send(res, 200, ok(matches));
+  if (/^\/teams\/[^/]+\/analysis$/.test(path)) return send(res, 200, ok(null));
+  if (/^\/teams\/[^/]+$/.test(path)) return send(res, 200, ok(teams[0]));
 
   if (path === '/players') return send(res, 200, paginated(players));
+  if (/^\/players\/[^/]+\/(analysis|rating)$/.test(path)) return send(res, 200, ok(null));
   if (/^\/players\/[^/]+$/.test(path)) return send(res, 200, ok(players[0]));
 
   if (path === '/news') return send(res, 200, paginated(news));
-  if (/^\/news\/[^/]+$/.test(path)) return send(res, 200, ok(news[0]));
+  if (/^\/news\/[^/]+$/.test(path)) return send(res, 200, ok(newsDetail));
 
   if (path === '/champion-predictions/latest') return send(res, 200, ok(champion));
 

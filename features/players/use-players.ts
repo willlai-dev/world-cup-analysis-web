@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { apiData } from '@/lib/api-client';
 import { cleanParams, fetchList } from '@/lib/list';
-import type { PlayerDetail, PlayerPosition, PlayerRatingTier, PlayerSummary } from '@/types/api';
+import type { AiReport, PlayerPosition, PlayerRatingTier, PlayerSummary } from '@/types/api';
 
 export type PlayerListParams = {
   page?: number;
@@ -24,10 +24,30 @@ export function usePlayers(params: PlayerListParams) {
   });
 }
 
+// GET /players/:playerId returns a PlayerSummary (with nested team). The AI
+// analysis is a separate sub-resource; there is no relatedNews on this endpoint.
 export function usePlayer(playerId: string) {
   return useQuery({
     queryKey: ['players', 'detail', playerId],
-    queryFn: ({ signal }) => apiData<PlayerDetail>(`/players/${playerId}`, { signal }),
+    queryFn: ({ signal }) => apiData<PlayerSummary>(`/players/${playerId}`, { signal }),
+    enabled: !!playerId,
+  });
+}
+
+export function usePlayerAnalysis(playerId: string) {
+  return useQuery({
+    queryKey: ['players', 'analysis', playerId],
+    queryFn: ({ signal }) => apiData<AiReport | null>(`/players/${playerId}/analysis`, { signal }),
+    enabled: !!playerId,
+  });
+}
+
+// AI rating report (PLAYER_RATING / PLAYER_HEXAGON_ANALYSIS). Phase 2 hexagon
+// chart will also build on this; Phase 1 surfaces it as a plain report card.
+export function usePlayerRating(playerId: string) {
+  return useQuery({
+    queryKey: ['players', 'rating', playerId],
+    queryFn: ({ signal }) => apiData<AiReport | null>(`/players/${playerId}/rating`, { signal }),
     enabled: !!playerId,
   });
 }

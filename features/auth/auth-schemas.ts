@@ -7,11 +7,22 @@ export const loginSchema = z.object({
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
+// Bounds mirror the backend ValidationPipe exactly (contract §5.2–5.4):
+// password 8..100, displayName 1..60, nickname<=60, bio<=1000.
+const passwordField = z
+  .string()
+  .min(8, '密碼至少 8 個字元')
+  .max(100, '密碼最多 100 個字元');
+const displayNameField = z
+  .string()
+  .min(1, '請輸入顯示名稱')
+  .max(60, '顯示名稱最多 60 個字');
+
 export const registerSchema = z
   .object({
     email: z.string().min(1, '請輸入電子郵件').email('電子郵件格式不正確'),
-    displayName: z.string().min(2, '顯示名稱至少 2 個字'),
-    password: z.string().min(8, '密碼至少 8 個字元'),
+    displayName: displayNameField,
+    password: passwordField,
     confirmPassword: z.string().min(1, '請再次輸入密碼'),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -23,17 +34,17 @@ export type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const adminCreateUserSchema = z.object({
   email: z.string().min(1, '請輸入電子郵件').email('電子郵件格式不正確'),
-  displayName: z.string().min(2, '顯示名稱至少 2 個字'),
-  password: z.string().min(8, '密碼至少 8 個字元'),
+  displayName: displayNameField,
+  password: passwordField,
   role: z.enum(['USER', 'PREMIUM', 'ADMIN']),
 });
 
 export type AdminCreateUserFormValues = z.infer<typeof adminCreateUserSchema>;
 
 export const profileSchema = z.object({
-  displayName: z.string().min(2, '顯示名稱至少 2 個字'),
-  nickname: z.string().max(40, '暱稱過長').optional().or(z.literal('')),
-  bio: z.string().max(300, '簡介過長').optional().or(z.literal('')),
+  displayName: displayNameField,
+  nickname: z.string().max(60, '暱稱最多 60 個字').optional().or(z.literal('')),
+  bio: z.string().max(1000, '簡介最多 1000 個字').optional().or(z.literal('')),
 });
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { routes } from '@/lib/routes';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, newsCategoryLabel } from '@/lib/formatters';
 import type { NewsSummary } from '@/types/api';
 
 export function NewsCard({ news }: { news: NewsSummary }) {
@@ -25,7 +25,7 @@ export function NewsCard({ news }: { news: NewsSummary }) {
         )}
 
         <div className="flex flex-wrap items-center gap-1.5">
-          {news.category && <Badge tone="brand">{news.category}</Badge>}
+          {news.category && <Badge tone="brand">{newsCategoryLabel(news.category)}</Badge>}
           {(news.tags ?? []).slice(0, 3).map((tag) => (
             <Badge key={tag.id} tone="neutral">
               {tag.name}

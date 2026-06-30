@@ -2,6 +2,7 @@ import type {
   ChampionPredictionResponse,
   HomeHighlightsResponse,
   MatchSummary,
+  MeDto,
   NewsSummary,
   PlayerSummary,
   TeamSummary,
@@ -91,7 +92,7 @@ export const matchFixtures: MatchSummary[] = [
     id: 'match-1',
     homeTeam: teamFixtures[0],
     awayTeam: teamFixtures[1],
-    stage: '小組賽',
+    stage: 'GROUP',
     groupName: 'A',
     stadium: 'Lusail Stadium',
     kickoffAt: '2026-06-15T18:00:00.000Z',
@@ -102,7 +103,7 @@ export const matchFixtures: MatchSummary[] = [
     id: 'match-2',
     homeTeam: teamFixtures[1],
     awayTeam: teamFixtures[0],
-    stage: '小組賽',
+    stage: 'GROUP',
     groupName: 'A',
     kickoffAt: '2026-06-10T15:00:00.000Z',
     status: 'FINISHED',
@@ -122,7 +123,7 @@ export const newsFixtures: NewsSummary[] = [
     summaryEn: 'France announced a strong squad.',
     summaryZh: '法國公布了一份實力堅強的名單。',
     publishedAt: '2026-06-01T09:00:00.000Z',
-    category: '陣容',
+    category: 'TEAM',
     tags: [{ id: 'tag-1', name: 'France', type: 'TEAM' }],
     translationStatus: 'NONE',
   },
@@ -197,3 +198,8 @@ export const adminUserList: User[] = [
   userFixtures.premium,
   userFixtures.admin,
 ];
+
+export const meFixture: MeDto = {
+  ...userFixtures.user,
+  profile: { nickname: '小明', avatarUrl: null, bio: '世足愛好者' },
+};

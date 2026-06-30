@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { apiData } from '@/lib/api-client';
 import { cleanParams, fetchList } from '@/lib/list';
-import type { MatchSummary, PlayerSummary, TeamDetail, TeamRatingTier, TeamSummary } from '@/types/api';
+import type { AiReport, MatchSummary, PlayerSummary, TeamRatingTier, TeamSummary } from '@/types/api';
 
 export type TeamListParams = {
   page?: number;
@@ -23,10 +23,20 @@ export function useTeams(params: TeamListParams) {
   });
 }
 
+// GET /teams/:teamId returns a bare TeamSummary. analysis / players / matches
+// are separate sub-resources (see hooks below).
 export function useTeam(teamId: string) {
   return useQuery({
     queryKey: ['teams', 'detail', teamId],
-    queryFn: ({ signal }) => apiData<TeamDetail>(`/teams/${teamId}`, { signal }),
+    queryFn: ({ signal }) => apiData<TeamSummary>(`/teams/${teamId}`, { signal }),
+    enabled: !!teamId,
+  });
+}
+
+export function useTeamAnalysis(teamId: string) {
+  return useQuery({
+    queryKey: ['teams', 'analysis', teamId],
+    queryFn: ({ signal }) => apiData<AiReport | null>(`/teams/${teamId}/analysis`, { signal }),
     enabled: !!teamId,
   });
 }

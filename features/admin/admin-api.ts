@@ -1,6 +1,7 @@
 import { apiFetch, apiData, getPagination } from '@/lib/api-client';
 import type {
   AdminCreateUserRequest,
+  AdminRegisterAdminRequest,
   AdminUpdateRoleRequest,
   PaginationMeta,
   User,
@@ -50,6 +51,8 @@ export function deleteUser(userId: string): Promise<unknown> {
   return apiData(`/admin/users/${userId}`, { method: 'DELETE' });
 }
 
-export function registerAdmin(body: AdminCreateUserRequest): Promise<User> {
+// register-admin only accepts { email, password, displayName } — no role field
+// (backend forbidNonWhitelisted would reject a stray role with 400).
+export function registerAdmin(body: AdminRegisterAdminRequest): Promise<User> {
   return apiData<User>('/admin/register-admin', { method: 'POST', body });
 }

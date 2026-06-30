@@ -1,14 +1,14 @@
 'use client';
 
-import { PremiumOnly } from '@/components/auth/RoleGate';
+import { PremiumGate } from '@/components/auth/RoleGate';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 
 // PREMIUM-only deep-chat entry point. Wiring lands in Phase 3; Phase 1 only
-// proves the role-gated visibility (USER never sees this).
+// proves role-gated visibility. USER sees a plain "can't use" notice.
 export function DeepChatPlaceholder({ context }: { context: string }) {
   return (
-    <PremiumOnly>
+    <PremiumGate feature="深層 AI 問答">
       <Card data-testid="deep-chat-panel">
         <CardHeader className="flex items-center justify-between">
           <CardTitle>深層 AI 問答</CardTitle>
@@ -20,6 +20,6 @@ export function DeepChatPlaceholder({ context }: { context: string }) {
           </p>
         </CardBody>
       </Card>
-    </PremiumOnly>
+    </PremiumGate>
   );
 }

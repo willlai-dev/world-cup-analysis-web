@@ -3,7 +3,7 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFlag } from '@/components/cards/TeamFlag';
 import { routes } from '@/lib/routes';
-import { formatDateTime, formatScore, teamName } from '@/lib/formatters';
+import { formatDateTime, formatScore, stageLabel, teamName } from '@/lib/formatters';
 import type { MatchStatus, MatchSummary } from '@/types/api';
 
 const STATUS_LABELS: Record<MatchStatus, string> = {
@@ -28,7 +28,7 @@ export function MatchCard({ match }: { match: MatchSummary }) {
       <CardBody className="flex flex-col gap-3">
         <div className="flex items-center justify-between text-xs text-slate-500">
           <span>
-            {match.stage}
+            {stageLabel(match.stage)}
             {match.groupName ? ` · ${match.groupName}` : ''}
           </span>
           <Badge tone={STATUS_TONE[match.status]}>{STATUS_LABELS[match.status]}</Badge>

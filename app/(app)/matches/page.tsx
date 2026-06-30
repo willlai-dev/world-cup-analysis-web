@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useMatches, type MatchListParams } from '@/features/matches/use-matches';
-import { MATCH_STATUSES, DEFAULT_PAGE_SIZE } from '@/lib/constants';
+import { MATCH_STATUSES, MATCH_STAGES, DEFAULT_PAGE_SIZE } from '@/lib/constants';
+import { stageLabel } from '@/lib/formatters';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Input } from '@/components/ui/Input';
@@ -10,7 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { MatchCard } from '@/components/cards/MatchCard';
 import { Pagination } from '@/components/ui/Pagination';
 import { ListSkeleton, ErrorState, EmptyState } from '@/components/ui/states';
-import type { MatchStatus } from '@/types/api';
+import type { MatchStage, MatchStatus } from '@/types/api';
 
 const STATUS_LABELS: Record<MatchStatus, string> = {
   SCHEDULED: '未開始',
@@ -48,11 +49,12 @@ export default function MatchesPage() {
           value={filters.status ?? ''}
           onChange={(e) => update({ status: e.target.value as MatchStatus | '' })}
         />
-        <Input
+        <Select
           label="階段"
-          placeholder="例如：小組賽"
+          placeholder="全部階段"
+          options={MATCH_STAGES.map((s) => ({ label: stageLabel(s), value: s }))}
           value={filters.stage ?? ''}
-          onChange={(e) => update({ stage: e.target.value })}
+          onChange={(e) => update({ stage: e.target.value as MatchStage | '' })}
         />
         <Input
           label="分組"
