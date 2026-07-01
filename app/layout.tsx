@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/app/providers';
 import { getServerUser } from '@/lib/auth';
+import { HomeEntranceSplash } from '@/components/layout/HomeEntranceSplash';
+import { NavigationProgress } from '@/components/layout/NavigationProgress';
 
 export const metadata: Metadata = {
   title: 'AI World Cup Analyst',
@@ -19,6 +21,8 @@ export default async function RootLayout({
   return (
     <html lang="zh-Hant">
       <body>
+        <HomeEntranceSplash />
+        <NavigationProgress />
         <Providers initialUser={initialUser}>{children}</Providers>
       </body>
     </html>

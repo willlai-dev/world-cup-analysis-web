@@ -1,4 +1,11 @@
-import type { MatchStage, NewsCategory, PlayerPosition, TeamRatingTier } from '@/types/api';
+import type {
+  MatchStage,
+  NewsCategory,
+  PlayerPosition,
+  PlayerRatingTier,
+  RiskLevel,
+  TeamRatingTier,
+} from '@/types/api';
 
 export function formatDateTime(value?: string | null): string {
   if (!value) return '—';
@@ -7,6 +14,7 @@ export function formatDateTime(value?: string | null): string {
   return new Intl.DateTimeFormat('zh-TW', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'Asia/Taipei',
   }).format(date);
 }
 
@@ -14,7 +22,9 @@ export function formatDate(value?: string | null): string {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium' }).format(date);
+  return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium', timeZone: 'Asia/Taipei' }).format(
+    date,
+  );
 }
 
 export function formatScore(home?: number | null, away?: number | null): string {
@@ -54,6 +64,12 @@ export function teamTierLabel(tier?: TeamRatingTier | null): string {
   return TEAM_TIER_LABELS[tier] ?? tier;
 }
 
+// Player rating tier as a short badge label: S / A+ / A / B+ / B / C / 未評級.
+export function playerTierLabel(tier?: PlayerRatingTier | null): string {
+  if (!tier || tier === 'UNKNOWN') return '未評級';
+  return tier.replace('_PLUS', '+');
+}
+
 const MATCH_STAGE_LABELS: Record<MatchStage, string> = {
   GROUP: '小組賽',
   ROUND_OF_32: '32 強',
@@ -89,6 +105,24 @@ export function newsCategoryLabel(category?: NewsCategory | null): string {
 
 export function teamName(team: { nameZh?: string | null; nameEn: string }): string {
   return team.nameZh?.trim() || team.nameEn;
+}
+
+// "已淘汰" vs "仍在賽". Deliberately not "已晉級" — group-stage elimination is not
+// yet reflected by the backend, so false only means "not yet eliminated".
+export function eliminationLabel(isEliminated?: boolean): string {
+  return isEliminated ? '已淘汰' : '仍在賽';
+}
+
+const RISK_LABELS: Record<RiskLevel, string> = {
+  LOW: '低',
+  MEDIUM: '中',
+  HIGH: '高',
+  UNKNOWN: '未知',
+};
+
+export function riskLabel(level?: RiskLevel | null): string {
+  if (!level) return '未知';
+  return RISK_LABELS[level] ?? level;
 }
 
 export function playerName(player: { nameZh?: string | null; nameEn: string }): string {

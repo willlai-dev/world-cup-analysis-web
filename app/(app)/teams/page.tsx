@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { useTeams, type TeamListParams } from '@/features/teams/use-teams';
-import { CONTINENTS, TEAM_RATING_TIERS, DEFAULT_PAGE_SIZE } from '@/lib/constants';
+import { CONTINENTS, TEAM_RATING_TIERS, ELIMINATION_OPTIONS } from '@/lib/constants';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 import { TeamCard } from '@/components/cards/TeamCard';
-import { Pagination } from '@/components/ui/Pagination';
 import { ListSkeleton, ErrorState, EmptyState } from '@/components/ui/states';
 import type { TeamRatingTier } from '@/types/api';
 
@@ -20,8 +20,6 @@ const SORT_OPTIONS = [
 
 export default function TeamsPage() {
   const [filters, setFilters] = useState<TeamListParams>({
-    page: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
     search: '',
     continent: '',
     ratingTier: '',
@@ -31,8 +29,7 @@ export default function TeamsPage() {
 
   const query = useTeams(filters);
   const update = (patch: Partial<TeamListParams>) =>
-    setFilters((prev) => ({ ...prev, ...patch, page: patch.page ?? 1 }));
-  const pagination = query.data?.pagination;
+    setFilters((prev) => ({ ...prev, ...patch }));
 
   return (
     <div>
@@ -60,11 +57,32 @@ export default function TeamsPage() {
           onChange={(e) => update({ ratingTier: e.target.value as TeamRatingTier | '' })}
         />
         <Select
-          label="排序"
-          options={SORT_OPTIONS}
-          value={filters.sortBy ?? ''}
-          onChange={(e) => update({ sortBy: e.target.value })}
+          label="狀態"
+          placeholder="全部狀態"
+          options={ELIMINATION_OPTIONS}
+          value={filters.eliminated ?? ''}
+          onChange={(e) => update({ eliminated: e.target.value as 'true' | 'false' | '' })}
         />
+        <div className="flex items-end gap-1">
+          <Select
+            label="排序"
+            options={SORT_OPTIONS}
+            value={filters.sortBy ?? ''}
+            onChange={(e) => update({ sortBy: e.target.value })}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            className="w-10 px-0"
+            title={filters.sortOrder === 'asc' ? '升序，點擊切換降序' : '降序，點擊切換升序'}
+            onClick={() =>
+              update({ sortOrder: filters.sortOrder === 'asc' ? 'desc' : 'asc' })
+            }
+          >
+            {filters.sortOrder === 'asc' ? '↑' : '↓'}
+          </Button>
+        </div>
       </FilterBar>
 
       {query.isLoading ? (
@@ -74,20 +92,11 @@ export default function TeamsPage() {
       ) : !query.data || query.data.items.length === 0 ? (
         <EmptyState />
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {query.data.items.map((team) => (
-              <TeamCard key={team.id} team={team} />
-            ))}
-          </div>
-          {pagination && (
-            <Pagination
-              page={pagination.page}
-              totalPages={pagination.totalPages}
-              onPageChange={(page) => update({ page })}
-            />
-          )}
-        </>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {query.data.items.map((team) => (
+            <TeamCard key={team.id} team={team} />
+          ))}
+        </div>
       )}
     </div>
   );

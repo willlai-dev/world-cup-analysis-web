@@ -42,7 +42,14 @@ export function FavoriteButton(props: FavoriteButtonProps) {
         props.className,
       )}
     >
-      <span aria-hidden>{favorited ? '★' : '☆'}</span>
+      {isPending ? (
+        <span
+          aria-hidden
+          className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+        />
+      ) : (
+        <span aria-hidden>{favorited ? '★' : '☆'}</span>
+      )}
       {favorited ? '已收藏' : '收藏'}
     </button>
   );

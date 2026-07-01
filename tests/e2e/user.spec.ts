@@ -15,6 +15,21 @@ test.describe('USER', () => {
     await expect(page.getByRole('heading', { name: '球員' })).toBeVisible();
   });
 
+  test('shows elimination status on the teams list', async ({ page }) => {
+    await loginAs(page, 'user');
+    await page.goto('/teams');
+    // The mock backend marks Argentina as eliminated.
+    await expect(page.getByText('已淘汰').first()).toBeVisible();
+  });
+
+  test('can ask the floating chat and get an answer', async ({ page }) => {
+    await loginAs(page, 'user');
+    await page.getByTestId('floating-chat-button').click();
+    await page.getByLabel('輸入問題').fill('法國有哪些高評級球員？');
+    await page.getByRole('button', { name: '送出' }).click();
+    await expect(page.getByText('模擬回答：法國有哪些高評級球員？')).toBeVisible();
+  });
+
   test('sees the general floating chat but premium features show a can-not-use notice', async ({ page }) => {
     await loginAs(page, 'user');
     await expect(page.getByTestId('floating-chat-button')).toBeVisible();

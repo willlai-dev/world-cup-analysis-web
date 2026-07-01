@@ -6,10 +6,13 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { FavoriteButton } from '@/components/cards/FavoriteButton';
 import { AiReportCard } from '@/components/ai/AiReportCard';
+import { PlayerRatingCard } from '@/components/ai/PlayerRatingCard';
+import { InjuryRiskBadge } from '@/components/ai/InjuryRiskBadge';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
 import { AbilityMeter } from '@/components/charts/AbilityMeter';
+import { PlayerHexagonChart, type HexAxis } from '@/components/charts/PlayerHexagonChart';
 import { LoadingState, ErrorState } from '@/components/ui/states';
-import { playerName, positionLabel, teamName } from '@/lib/formatters';
+import { playerName, playerTierLabel, positionLabel, teamName } from '@/lib/formatters';
 
 export default function PlayerDetailPage() {
   const { playerId } = useParams<{ playerId: string }>();
@@ -22,6 +25,16 @@ export default function PlayerDetailPage() {
   if (!player.data) return <ErrorState />;
 
   const p = player.data;
+
+  // Shared by the radar and the numeric bars (進攻/創造/技術/防守/身體/狀態).
+  const abilityAxes: HexAxis[] = [
+    { label: '進攻', value: p.attackScore },
+    { label: '創造', value: p.creativityScore },
+    { label: '技術', value: p.techniqueScore },
+    { label: '防守', value: p.defenseScore },
+    { label: '身體', value: p.physicalScore },
+    { label: '狀態', value: p.formScore },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,33 +49,41 @@ export default function PlayerDetailPage() {
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {p.ratingTier && p.ratingTier !== 'UNKNOWN' && (
-              <Badge tone="brand">{p.ratingTier.replace('_PLUS', '+')}</Badge>
-            )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {p.overallScore != null && (
+                <span className="text-sm text-slate-500">
+                  總分 <span className="font-semibold text-slate-900">{p.overallScore}</span>
+                </span>
+              )}
+              {p.ratingTier && p.ratingTier !== 'UNKNOWN' && (
+                <Badge tone="brand">{playerTierLabel(p.ratingTier)}</Badge>
+              )}
+              <InjuryRiskBadge level={p.injuryRiskLevel} />
+            </div>
             <FavoriteButton kind="player" id={p.id} />
           </div>
         </CardBody>
       </Card>
 
-      {/* Hexagon ability chart is deferred to Phase 2 — Phase 1 shows the raw values. */}
       <Card>
         <CardHeader>
           <CardTitle>六邊能力值</CardTitle>
         </CardHeader>
         <CardBody>
-          <p className="mb-4 text-xs text-slate-400">六邊形圖表將於 Phase 2 提供，目前以數值呈現。</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <AbilityMeter label="進攻" value={p.attackScore} />
-            <AbilityMeter label="創造" value={p.creativityScore} />
-            <AbilityMeter label="技術" value={p.techniqueScore} />
-            <AbilityMeter label="防守" value={p.defenseScore} />
-            <AbilityMeter label="身體" value={p.physicalScore} />
-            <AbilityMeter label="狀態" value={p.formScore} />
+          <div className="grid items-center gap-6 md:grid-cols-2">
+            <div className="flex justify-center">
+              <PlayerHexagonChart axes={abilityAxes} />
+            </div>
+            <div className="grid gap-4">
+              {abilityAxes.map((axis) => (
+                <AbilityMeter key={axis.label} label={axis.label} value={axis.value} />
+              ))}
+            </div>
           </div>
         </CardBody>
       </Card>
 
-      <AiReportCard title="AI 球員評級" report={rating.data} isLoading={rating.isLoading} />
+      <PlayerRatingCard report={rating.data} isLoading={rating.isLoading} />
 
       <AiReportCard title="AI 球員分析" report={analysis.data} isLoading={analysis.isLoading} />
 

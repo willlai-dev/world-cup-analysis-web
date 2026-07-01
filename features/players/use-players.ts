@@ -2,16 +2,16 @@
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { apiData } from '@/lib/api-client';
-import { cleanParams, fetchList } from '@/lib/list';
+import { cleanParams, fetchAll, type ListResult } from '@/lib/list';
 import type { AiReport, PlayerPosition, PlayerRatingTier, PlayerSummary } from '@/types/api';
 
 export type PlayerListParams = {
-  page?: number;
-  pageSize?: number;
   search?: string;
   teamId?: string;
   position?: PlayerPosition | '';
   ratingTier?: PlayerRatingTier | '';
+  // Phase 2: filter by the player's team elimination status ("true"/"false").
+  eliminated?: 'true' | 'false' | '';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc' | '';
 };
@@ -19,7 +19,20 @@ export type PlayerListParams = {
 export function usePlayers(params: PlayerListParams) {
   return useQuery({
     queryKey: ['players', params],
-    queryFn: ({ signal }) => fetchList<PlayerSummary>('/players', cleanParams(params), signal),
+    queryFn: ({ signal }) => fetchAll<PlayerSummary>('/players', cleanParams(params), signal),
+    select: (data): ListResult<PlayerSummary> => {
+      const key = (params.sortBy ?? 'overallScore') as keyof PlayerSummary;
+      return {
+        ...data,
+        items: [...data.items].sort((a, b) => {
+          const aVal = a[key];
+          const bVal = b[key];
+          if (aVal == null && bVal != null) return 1;
+          if (aVal != null && bVal == null) return -1;
+          return 0;
+        }),
+      };
+    },
     placeholderData: keepPreviousData,
   });
 }

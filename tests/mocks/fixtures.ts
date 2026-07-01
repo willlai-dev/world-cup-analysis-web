@@ -1,6 +1,8 @@
 import type {
+  AiReport,
   ChampionPredictionResponse,
   HomeHighlightsResponse,
+  MatchPrediction,
   MatchSummary,
   MeDto,
   NewsSummary,
@@ -25,6 +27,7 @@ export const teamFixtures: TeamSummary[] = [
     midfieldScore: 85,
     defenseScore: 84,
     statusScore: 80,
+    isEliminated: false,
   },
   {
     id: 'team-arg',
@@ -41,6 +44,7 @@ export const teamFixtures: TeamSummary[] = [
     midfieldScore: 86,
     defenseScore: 80,
     statusScore: 83,
+    isEliminated: false,
   },
 ];
 
@@ -141,6 +145,7 @@ export const championFixture: ChampionPredictionResponse = {
       rank: 1,
       championScore: 88,
       ratingTier: 'S',
+      probabilityText: '具備最高奪冠傾向。',
       strengths: ['攻擊火力強', '陣容深度足'],
       risks: ['防線老化'],
       aiComment: '本屆最被看好的奪冠熱門之一。',
@@ -151,6 +156,7 @@ export const championFixture: ChampionPredictionResponse = {
       rank: 2,
       championScore: 86,
       ratingTier: 'S',
+      probabilityText: '奪冠傾向次高。',
       strengths: ['中場控制力'],
       risks: ['體能負荷'],
       aiComment: '經驗豐富，具備奪冠實力。',
@@ -202,4 +208,47 @@ export const adminUserList: User[] = [
 export const meFixture: MeDto = {
   ...userFixtures.user,
   profile: { nickname: '小明', avatarUrl: null, bio: '世足愛好者' },
+};
+
+// AiReport for GET /players/:id/rating with structuredJson (PLAYER_HEXAGON_ANALYSIS).
+export const playerRatingReportFixture: AiReport = {
+  id: 'rating-1',
+  entityType: 'PLAYER',
+  entityId: 'player-mbappe',
+  reportType: 'PLAYER_HEXAGON_ANALYSIS',
+  provider: 'NVIDIA',
+  model: 'nemotron-super',
+  language: 'zh-Hant',
+  title: 'AI 球員評級',
+  content: '整體評價極高的前鋒。',
+  structuredJson: {
+    overallScore: 92,
+    ratingTier: 'S',
+    strengths: ['速度爆發力強', '射門把握度高'],
+    weaknesses: ['防守參與度低'],
+    roleSummary: '進攻核心，主要負責衝擊防線與終結機會。',
+    injuryRiskLevel: 'LOW',
+    dataLimitations: ['近期出賽樣本有限'],
+  },
+  confidenceScore: 0.86,
+  status: 'DONE',
+  createdAt: '2026-06-01T00:00:00.000Z',
+  updatedAt: '2026-06-01T00:00:00.000Z',
+};
+
+// MatchPrediction with likelyScorelines for GET /matches/:id/prediction.
+export const matchPredictionFixture: MatchPrediction = {
+  matchId: 'match-1',
+  homeWinProbability: 46,
+  drawProbability: 27,
+  awayWinProbability: 27,
+  likelyScorelines: [
+    { score: '2-1', probability: 18 },
+    { score: '1-1', probability: 15 },
+    { score: '2-0', probability: 12 },
+  ],
+  keyFactors: ['主隊近期狀態佳'],
+  riskNotes: ['關鍵中場可能缺陣'],
+  report: null,
+  sourceUpdatedAt: '2026-07-01T00:00:00.000Z',
 };

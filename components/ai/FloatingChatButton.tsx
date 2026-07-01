@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useAuth } from '@/features/auth/use-auth';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { GeneralFloatingChat, type ChatTurn } from '@/components/ai/GeneralFloatingChat';
 
-// Phase 1 stub: visible only to USER/PREMIUM (hidden for ADMIN and guests).
-// The actual `POST /ai/chat` wiring lands in Phase 2; here it only proves visibility rules.
+// Visible only to USER/PREMIUM (hidden for ADMIN and guests). Owns the chat thread
+// state so it survives the modal open/close cycle.
 export function FloatingChatButton() {
   const { isAppUser } = useAuth();
   const [open, setOpen] = useState(false);
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
 
   if (!isAppUser) return null;
 
@@ -25,15 +27,17 @@ export function FloatingChatButton() {
         💬
       </button>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="AI 問答">
-        <p className="text-sm text-slate-600">
-          一般 AI 問答將於 Phase 2 開放。屆時可詢問賽事、國家隊、球員、新聞與冠軍預測。
-        </p>
-        <div className="mt-4 flex justify-end">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="AI 問答"
+        footer={
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
             關閉
           </Button>
-        </div>
+        }
+      >
+        <GeneralFloatingChat turns={turns} onTurnsChange={setTurns} />
       </Modal>
     </>
   );

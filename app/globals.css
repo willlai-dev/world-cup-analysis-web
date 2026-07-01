@@ -3,9 +3,141 @@
 @theme {
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
   --color-brand-500: #3b82f6;
   --color-brand-600: #2563eb;
   --color-brand-700: #1d4ed8;
+}
+
+/* Diagonal sheen that slides across the leading scoreline bar. */
+@keyframes score-shine {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  60%,
+  100% {
+    transform: translateX(360%) skewX(-12deg);
+  }
+}
+
+/* Skeleton shimmer sweep */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/* Page-transition: card hover lift */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-splash-ball {
+  0% {
+    transform: translate3d(-116px, -14px, 0) scale(0.82) rotate(-18deg);
+  }
+  38% {
+    transform: translate3d(-8px, 0, 0) scale(1.02) rotate(8deg);
+  }
+  60% {
+    transform: translate3d(28px, -42px, 0) scale(1.08) rotate(14deg);
+  }
+  100% {
+    transform: translate3d(146px, -10px, 0) scale(0.96) rotate(24deg);
+  }
+}
+
+@keyframes home-splash-shadow {
+  0% {
+    transform: translateX(-50%) scaleX(0.72);
+    opacity: 0.16;
+  }
+  38% {
+    transform: translateX(-50%) scaleX(1);
+    opacity: 0.28;
+  }
+  60% {
+    transform: translateX(-50%) scaleX(0.84);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateX(-50%) scaleX(0.94);
+    opacity: 0.12;
+  }
+}
+
+@keyframes home-splash-ring {
+  0% {
+    transform: scale(0.88);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.28;
+  }
+  100% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+}
+
+@keyframes home-splash-streak {
+  0% {
+    opacity: 0;
+    transform: translate3d(-126px, -50%, 0) scaleX(0.35);
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(132px, -50%, 0) scaleX(1.15);
+  }
+}
+
+@keyframes home-splash-pitch {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.82);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.home-splash-ball {
+  animation: home-splash-ball 1.18s cubic-bezier(0.22, 0.9, 0.34, 1) forwards;
+}
+
+.home-splash-shadow {
+  animation: home-splash-shadow 1.18s ease-out forwards;
+}
+
+.home-splash-ring {
+  animation: home-splash-ring 1.2s ease-out forwards;
+}
+
+.home-splash-ring-delay {
+  animation: home-splash-ring 1.2s ease-out 0.12s forwards;
+}
+
+.home-splash-streak {
+  animation: home-splash-streak 0.85s ease-out 0.08s forwards;
+}
+
+.home-splash-pitch {
+  animation: home-splash-pitch 0.42s ease-out forwards;
 }
 
 :root {

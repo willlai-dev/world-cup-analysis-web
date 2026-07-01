@@ -4,10 +4,10 @@ import { useParams } from 'next/navigation';
 import { useNewsItem } from '@/features/news/use-news';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { PremiumGate } from '@/components/auth/RoleGate';
+import { NewsTranslationPanel } from '@/components/ai/NewsTranslationPanel';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
 import { LoadingState, ErrorState } from '@/components/ui/states';
+import { NEWS_TAG_TONES } from '@/lib/constants';
 import { formatDateTime, newsCategoryLabel } from '@/lib/formatters';
 
 export default function NewsDetailPage() {
@@ -34,7 +34,7 @@ export default function NewsDetailPage() {
           <div className="flex flex-wrap items-center gap-1.5">
             {n.category && <Badge tone="brand">{newsCategoryLabel(n.category)}</Badge>}
             {(n.tags ?? []).map((tag) => (
-              <Badge key={tag.id} tone="neutral">
+              <Badge key={tag.id} tone={NEWS_TAG_TONES[tag.type] ?? 'neutral'}>
                 {tag.name}
               </Badge>
             ))}
@@ -60,23 +60,8 @@ export default function NewsDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Translation is PREMIUM-only and wired in Phase 2; USER sees a can't-use notice. */}
-      <PremiumGate feature="新聞翻譯">
-        <Card data-testid="translation-panel">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle>繁體中文翻譯</CardTitle>
-            <Badge tone="premium">PREMIUM</Badge>
-          </CardHeader>
-          <CardBody className="flex items-center justify-between gap-4">
-            <p className="text-sm text-slate-500">
-              {n.translatedContentZh ?? '使用 Qwen 翻譯新聞為繁體中文（Phase 2 開放）。'}
-            </p>
-            <Button variant="outline" size="sm" disabled title="Phase 2 開放">
-              翻譯
-            </Button>
-          </CardBody>
-        </Card>
-      </PremiumGate>
+      {/* Translation is PREMIUM-only; USER sees a can't-use notice via PremiumGate. */}
+      <NewsTranslationPanel news={n} />
 
       <DeepChatPlaceholder context={n.titleEn} />
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiData } from '@/lib/api-client';
 import { cleanParams, fetchList } from '@/lib/list';
 import type { NewsCategory, NewsDetail, NewsSummary } from '@/types/api';
@@ -30,5 +30,18 @@ export function useNewsItem(newsId: string) {
     queryKey: ['news', 'detail', newsId],
     queryFn: ({ signal }) => apiData<NewsDetail>(`/news/${newsId}`, { signal }),
     enabled: !!newsId,
+  });
+}
+
+// POST /api/news/:newsId/translate — PREMIUM only, returns the full updated
+// NewsDetail (translationStatus DONE/FAILED). Seed the detail cache with the
+// response so the page's title/translation reflect it immediately.
+export function useTranslateNews(newsId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiData<NewsDetail>(`/news/${newsId}/translate`, { method: 'POST' }),
+    onSuccess: (detail) => {
+      queryClient.setQueryData<NewsDetail>(['news', 'detail', newsId], detail);
+    },
   });
 }

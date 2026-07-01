@@ -3,9 +3,11 @@ import {
   championFixture,
   homeHighlightsFixture,
   matchFixtures,
+  matchPredictionFixture,
   meFixture,
   newsFixtures,
   playerFixtures,
+  playerRatingReportFixture,
   teamFixtures,
   userFixtures,
 } from '@/tests/mocks/fixtures';
@@ -38,7 +40,7 @@ export const handlers = [
   http.get(`${API}/matches`, () => paginated(matchFixtures)),
   http.get(`${API}/matches/:id`, () => ok({ ...matchFixtures[0], events: [], keyPlayers: [] })),
   http.get(`${API}/matches/:id/analysis`, () => ok(null)),
-  http.get(`${API}/matches/:id/prediction`, () => ok(null)),
+  http.get(`${API}/matches/:id/prediction`, () => ok(matchPredictionFixture)),
   http.get(`${API}/matches/:id/post-match-report`, () => ok(null)),
 
   http.get(`${API}/teams`, () => paginated(teamFixtures)),
@@ -50,10 +52,32 @@ export const handlers = [
   http.get(`${API}/players`, () => paginated(playerFixtures)),
   http.get(`${API}/players/:id`, () => ok(playerFixtures[0])),
   http.get(`${API}/players/:id/analysis`, () => ok(null)),
-  http.get(`${API}/players/:id/rating`, () => ok(null)),
+  http.get(`${API}/players/:id/rating`, () => ok(playerRatingReportFixture)),
 
   http.get(`${API}/news`, () => paginated(newsFixtures)),
   http.get(`${API}/news/:id`, () => ok(newsFixtures[0])),
+  http.post(`${API}/news/:id/translate`, () =>
+    ok({
+      ...newsFixtures[0],
+      titleZh: '【譯】France name strong squad',
+      contentSnippet: 'snippet',
+      translatedContentZh: '這是翻譯後的繁體中文內容。',
+      language: 'en',
+      fetchedAt: '2026-06-01T09:00:00.000Z',
+      translationStatus: 'DONE',
+    }),
+  ),
+
+  // POST /ai/chat → ChatAnswerDto. Echoes the question so tests can assert on it.
+  http.post(`${API}/ai/chat`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { question?: string };
+    return ok({
+      answer: `模擬回答：${body.question ?? ''}`,
+      provider: 'NVIDIA',
+      model: 'mock-model',
+      sourceUpdatedAt: '2026-06-01T00:00:00.000Z',
+    });
+  }),
 
   http.get(`${API}/champion-predictions/latest`, () => ok(championFixture)),
 

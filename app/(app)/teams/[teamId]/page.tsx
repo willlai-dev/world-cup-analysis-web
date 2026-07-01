@@ -12,7 +12,7 @@ import { AiReportCard } from '@/components/ai/AiReportCard';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
 import { AbilityMeter } from '@/components/charts/AbilityMeter';
 import { LoadingState, ErrorState, EmptyState } from '@/components/ui/states';
-import { teamName, teamTierLabel } from '@/lib/formatters';
+import { teamName, teamTierLabel, eliminationLabel } from '@/lib/formatters';
 
 export default function TeamDetailPage() {
   const { teamId } = useParams<{ teamId: string }>();
@@ -43,7 +43,12 @@ export default function TeamDetailPage() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <Badge tone="brand">{teamTierLabel(t.ratingTier)}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge tone={t.isEliminated ? 'neutral' : 'success'}>
+                {eliminationLabel(t.isEliminated)}
+              </Badge>
+              <Badge tone="brand">{teamTierLabel(t.ratingTier)}</Badge>
+            </div>
             <FavoriteButton kind="team" id={t.id} />
           </div>
         </CardBody>

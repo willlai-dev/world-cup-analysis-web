@@ -121,6 +121,10 @@ export type TeamSummary = {
   midfieldScore?: number | null;
   defenseScore?: number | null;
   statusScore?: number | null;
+  // Phase 2: always present on TeamSummary (incl. nested PlayerSummary.team).
+  // true = knocked out in a finished knockout match. NOTE: group-stage elimination
+  // is NOT yet reflected, so false means "not yet eliminated", not "advanced".
+  isEliminated: boolean;
 };
 
 export type PlayerSummary = {
@@ -195,15 +199,46 @@ export type AiReport = {
   updatedAt: string;
 };
 
+// Most-likely scorelines for an upcoming match (up to 3, probability-desc).
+export type LikelyScoreline = { score: string; probability: number };
+
 export type MatchPrediction = {
   matchId: string;
   homeWinProbability?: number | null;
   drawProbability?: number | null;
   awayWinProbability?: number | null;
+  likelyScorelines?: LikelyScoreline[];
   keyFactors: string[];
   riskNotes: string[];
   report?: AiReport | null;
   sourceUpdatedAt?: string | null;
+};
+
+// ----- structuredJson shapes (AiReport.structuredJson is `unknown`; parse defensively) -----
+
+// GET /players/:id/rating → AiReportDto.structuredJson (PLAYER_HEXAGON_ANALYSIS).
+export type PlayerRatingStructured = {
+  overallScore?: number | null;
+  ratingTier?: PlayerRatingTier | null;
+  attackScore?: number | null;
+  creativityScore?: number | null;
+  techniqueScore?: number | null;
+  defenseScore?: number | null;
+  physicalScore?: number | null;
+  formScore?: number | null;
+  strengths: string[];
+  weaknesses: string[];
+  roleSummary?: string | null;
+  injuryRiskLevel?: RiskLevel | null;
+  dataLimitations: string[];
+};
+
+// GET /matches/:id/analysis → AiReportDto.structuredJson (MATCH_ANALYSIS).
+export type MatchAnalysisKeyPlayer = { name: string; reason?: string | null };
+export type MatchAnalysisStructured = {
+  title?: string | null;
+  summary?: string | null;
+  keyPlayers: MatchAnalysisKeyPlayer[];
 };
 
 export type NewsTag = { id: string; name: string; type: NewsTagType };
@@ -220,6 +255,9 @@ export type NewsSummary = {
   category?: NewsCategory | null;
   tags?: NewsTag[];
   translationStatus?: TranslationStatus;
+  // Phase 2: AI summary/classification may still be pending, in which case
+  // summaryZh / category / tags can be empty. Treat all of those as nullable.
+  aiSummaryStatus?: AiReportStatus;
 };
 
 // NewsDetailDto = NewsSummary & { contentSnippet, translatedContentZh, language, fetchedAt }.
@@ -268,6 +306,17 @@ export type HomeHighlightsResponse = {
   featuredTeams: TeamSummary[];
   featuredPlayers: PlayerSummary[];
   newsHighlights: NewsSummary[];
+};
+
+// ----- Match Refresh (POST /matches/:id/refresh) -----
+
+export type RefreshStatus = 'UPDATED' | 'SKIPPED_COOLDOWN' | 'SKIPPED_NO_SOURCE' | 'SOURCE_FAILED';
+
+export type RefreshMeta = {
+  status: RefreshStatus;
+  lastRefreshedAt: string | null;
+  nextRefreshAt: string;
+  reason?: string;
 };
 
 export type FavoritesResponse = {

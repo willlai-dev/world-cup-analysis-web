@@ -48,4 +48,39 @@ describe('AiReportCard states', () => {
     render(<AiReportCard isLoading />);
     expect(screen.getByTestId('ai-report-card')).toHaveAttribute('data-state', 'loading');
   });
+
+  it('treats a DONE report with no content/structured data as insufficient_data', () => {
+    render(<AiReportCard report={makeReport({ status: 'DONE', content: '   ' })} />);
+    expect(screen.getByTestId('ai-report-card')).toHaveAttribute(
+      'data-state',
+      'insufficient_data',
+    );
+    expect(screen.getByText(COPY.insufficientData)).toBeInTheDocument();
+  });
+
+  it('shows a confidence badge in the done state when a score is present', () => {
+    render(
+      <AiReportCard
+        report={makeReport({ status: 'DONE', content: '分析內容', confidenceScore: 0.82 })}
+      />,
+    );
+    expect(screen.getByTestId('ai-confidence-badge')).toHaveTextContent('可信度 82%');
+  });
+
+  it('never dumps raw JSON content — renders a readable summary instead', () => {
+    const json = JSON.stringify({ summary: '這是分析摘要', keyFactors: ['因素一'] });
+    render(<AiReportCard report={makeReport({ status: 'DONE', content: json })} />);
+    expect(screen.getByText('這是分析摘要')).toBeInTheDocument();
+    expect(screen.getByText('因素一')).toBeInTheDocument();
+    expect(screen.queryByText(/"summary"/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to structuredJson when content is empty', () => {
+    render(
+      <AiReportCard
+        report={makeReport({ status: 'DONE', content: null, structuredJson: { summary: '結構化摘要' } })}
+      />,
+    );
+    expect(screen.getByText('結構化摘要')).toBeInTheDocument();
+  });
 });

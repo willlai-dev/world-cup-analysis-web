@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   useMatch,
   useMatchAnalysis,
+  useMatchAutoRefresh,
   useMatchPrediction,
   useMatchPostReport,
 } from '@/features/matches/use-matches';
@@ -15,7 +17,9 @@ import { AiReportCard } from '@/components/ai/AiReportCard';
 import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
 import { ScoreBar } from '@/components/charts/ScoreBar';
 import { LoadingState, ErrorState } from '@/components/ui/states';
+import { parseMatchAnalysis, predictionScorelines, structuredSource } from '@/lib/ai';
 import { formatDateTime, formatScore, stageLabel, teamName } from '@/lib/formatters';
+import type { LikelyScoreline } from '@/types/api';
 
 export default function MatchDetailPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -24,11 +28,17 @@ export default function MatchDetailPage() {
   const prediction = useMatchPrediction(matchId);
   const postReport = useMatchPostReport(matchId);
 
+  // Auto-refresh: triggers once on mount if match is LIVE or kickoff is imminent.
+  // Schedules a single follow-up at nextRefreshAt while the match stays live.
+  useMatchAutoRefresh(matchId, match.data?.status, match.data?.kickoffAt);
+
   if (match.isLoading) return <LoadingState />;
   if (match.isError) return <ErrorState error={match.error} onRetry={() => match.refetch()} />;
   if (!match.data) return <ErrorState />;
 
   const m = match.data;
+  const analysisStructured = parseMatchAnalysis(structuredSource(analysis.data));
+  const likelyScorelines = prediction.data ? predictionScorelines(prediction.data) : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +73,24 @@ export default function MatchDetailPage() {
         isLoading={analysis.isLoading}
       />
 
+      {analysisStructured.keyPlayers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>關鍵球員</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <ul className="flex flex-col gap-2 text-sm">
+              {analysisStructured.keyPlayers.map((kp) => (
+                <li key={kp.name} className="flex flex-col">
+                  <span className="font-semibold text-slate-900">{kp.name}</span>
+                  {kp.reason && <span className="text-slate-600">{kp.reason}</span>}
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+
       {/* Win Prediction */}
       <Card>
         <CardHeader>
@@ -80,6 +108,7 @@ export default function MatchDetailPage() {
                   { label: '客勝', value: prediction.data.awayWinProbability, colorClass: 'bg-amber-500' },
                 ]}
               />
+              {likelyScorelines.length > 0 && <LikelyScorelines items={likelyScorelines} />}
               {prediction.data.keyFactors.length > 0 && (
                 <FactorList title="關鍵因素" items={prediction.data.keyFactors} />
               )}
@@ -162,6 +191,60 @@ function FactorList({ title, items }: { title: string; items: string[] }) {
       <ul className="list-inside list-disc text-sm text-slate-600">
         {items.map((item, i) => (
           <li key={i}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// 最可能比分 (§3): medal-ranked rows — rank + big score + animated bar + probability.
+const SCORELINE_MEDALS = ['🥇', '🥈', '🥉'];
+const SCORELINE_BAR_TONES = ['bg-brand-600', 'bg-brand-500', 'bg-brand-400'];
+// Leader fills to this share of the track (never edge-to-edge); others scale down.
+const SCORELINE_MAX_FILL = 80;
+
+function LikelyScorelines({ items }: { items: LikelyScoreline[] }) {
+  const top = items.slice(0, 3);
+  const max = Math.max(...top.map((s) => s.probability), 1);
+
+  // Grow the bars in from 0 on mount for a subtle reveal.
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  return (
+    <div data-testid="likely-scorelines">
+      <h4 className="mb-2 text-sm font-semibold text-slate-700">最可能比分</h4>
+      <ul className="flex flex-col gap-2.5">
+        {top.map((s, i) => (
+          <li key={s.score} className="flex items-center gap-3">
+            <span className="w-6 text-center text-lg" aria-hidden>
+              {SCORELINE_MEDALS[i] ?? `#${i + 1}`}
+            </span>
+            <span className="w-14 font-mono text-base font-bold tracking-wide text-slate-900">
+              {s.score.replace('-', ' : ')}
+            </span>
+            <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`relative h-full overflow-hidden rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
+                  SCORELINE_BAR_TONES[i] ?? SCORELINE_BAR_TONES[2]
+                }`}
+                style={{
+                  width: shown ? `${(s.probability / max) * SCORELINE_MAX_FILL}%` : '0%',
+                  transitionDelay: `${i * 140}ms`,
+                }}
+              >
+                {i === 0 && (
+                  <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-white/40 animate-[score-shine_2.6s_ease-in-out_infinite] motion-reduce:hidden" />
+                )}
+              </div>
+            </div>
+            <span className="w-12 text-right text-sm font-semibold text-slate-700">
+              {Math.round(s.probability)}%
+            </span>
+          </li>
         ))}
       </ul>
     </div>

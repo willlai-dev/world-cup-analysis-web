@@ -2,8 +2,10 @@ import Link from 'next/link';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { FavoriteButton } from '@/components/cards/FavoriteButton';
+import { InjuryRiskBadge } from '@/components/ai/InjuryRiskBadge';
+import { TeamFlag } from '@/components/cards/TeamFlag';
 import { routes } from '@/lib/routes';
-import { playerName, positionLabel, teamName } from '@/lib/formatters';
+import { playerName, playerTierLabel, positionLabel, teamName } from '@/lib/formatters';
 import type { PlayerSummary } from '@/types/api';
 
 export function PlayerCard({ player }: { player: PlayerSummary }) {
@@ -13,13 +15,19 @@ export function PlayerCard({ player }: { player: PlayerSummary }) {
         <div className="flex items-start justify-between">
           <Link href={routes.player(player.id)}>
             <p className="font-semibold text-slate-900">{playerName(player)}</p>
-            <p className="text-xs text-slate-500">
+            <p className="flex items-center gap-1 text-xs text-slate-500">
+              {player.team && (
+                <TeamFlag team={player.team} size={16} className="shrink-0" />
+              )}
               {player.team ? teamName(player.team) : '—'} · {positionLabel(player.position)}
             </p>
           </Link>
-          {player.ratingTier && player.ratingTier !== 'UNKNOWN' && (
-            <Badge tone="brand">{player.ratingTier.replace('_PLUS', '+')}</Badge>
-          )}
+          <div className="flex flex-col items-end gap-1">
+            {player.ratingTier && player.ratingTier !== 'UNKNOWN' && (
+              <Badge tone="brand">{playerTierLabel(player.ratingTier)}</Badge>
+            )}
+            <InjuryRiskBadge level={player.injuryRiskLevel} showLabel={false} />
+          </div>
         </div>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600">

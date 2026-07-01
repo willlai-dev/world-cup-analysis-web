@@ -7,10 +7,13 @@ test.describe('PREMIUM', () => {
     await expect(page.getByRole('heading', { name: '賽事' })).toBeVisible();
   });
 
-  test('sees the news translation panel', async ({ page }) => {
+  test('sees and can use the news translation panel', async ({ page }) => {
     await loginAs(page, 'premium');
     await page.goto('/news/news-1');
-    await expect(page.getByTestId('translation-panel')).toBeVisible();
+    // Dev-mode compiles this route on first hit; allow extra time for the panel.
+    await expect(page.getByTestId('translation-panel')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: '翻譯' }).click();
+    await expect(page.getByTestId('translated-content')).toBeVisible();
   });
 
   test('sees deep chat panels on detail pages', async ({ page }) => {

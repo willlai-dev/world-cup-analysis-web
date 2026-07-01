@@ -1,8 +1,8 @@
 import { cn } from '@/lib/utils';
 
-type Tone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'premium';
+export type BadgeTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'premium';
 
-const TONES: Record<Tone, string> = {
+const TONES: Record<BadgeTone, string> = {
   neutral: 'bg-slate-100 text-slate-700',
   brand: 'bg-brand-100 text-brand-700',
   success: 'bg-green-100 text-green-700',
@@ -12,7 +12,7 @@ const TONES: Record<Tone, string> = {
 };
 
 export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
-  tone?: Tone;
+  tone?: BadgeTone;
 };
 
 export function Badge({ tone = 'neutral', className, ...props }: BadgeProps) {

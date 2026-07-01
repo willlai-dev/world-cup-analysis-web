@@ -2,14 +2,13 @@
 
 import { useState } from 'react';
 import { useMatches, type MatchListParams } from '@/features/matches/use-matches';
-import { MATCH_STATUSES, MATCH_STAGES, DEFAULT_PAGE_SIZE } from '@/lib/constants';
+import { MATCH_STATUSES, MATCH_STAGES } from '@/lib/constants';
 import { stageLabel } from '@/lib/formatters';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { MatchCard } from '@/components/cards/MatchCard';
-import { Pagination } from '@/components/ui/Pagination';
 import { ListSkeleton, ErrorState, EmptyState } from '@/components/ui/states';
 import type { MatchStage, MatchStatus } from '@/types/api';
 
@@ -23,8 +22,6 @@ const STATUS_LABELS: Record<MatchStatus, string> = {
 
 export default function MatchesPage() {
   const [filters, setFilters] = useState<MatchListParams>({
-    page: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
     status: '',
     stage: '',
     dateFrom: '',
@@ -33,9 +30,7 @@ export default function MatchesPage() {
 
   const query = useMatches(filters);
   const update = (patch: Partial<MatchListParams>) =>
-    setFilters((prev) => ({ ...prev, ...patch, page: patch.page ?? 1 }));
-
-  const pagination = query.data?.pagination;
+    setFilters((prev) => ({ ...prev, ...patch }));
 
   return (
     <div>
@@ -77,20 +72,11 @@ export default function MatchesPage() {
       ) : !query.data || query.data.items.length === 0 ? (
         <EmptyState />
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {query.data.items.map((m) => (
-              <MatchCard key={m.id} match={m} />
-            ))}
-          </div>
-          {pagination && (
-            <Pagination
-              page={pagination.page}
-              totalPages={pagination.totalPages}
-              onPageChange={(page) => update({ page })}
-            />
-          )}
-        </>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {query.data.items.map((m) => (
+            <MatchCard key={m.id} match={m} />
+          ))}
+        </div>
       )}
     </div>
   );

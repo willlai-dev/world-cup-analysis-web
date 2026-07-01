@@ -4,12 +4,13 @@ import { Badge } from '@/components/ui/Badge';
 import { TeamFlag } from '@/components/cards/TeamFlag';
 import { FavoriteButton } from '@/components/cards/FavoriteButton';
 import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
 import { teamName, teamTierLabel } from '@/lib/formatters';
 import type { TeamSummary } from '@/types/api';
 
 export function TeamCard({ team }: { team: TeamSummary }) {
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card className={cn('transition-shadow hover:shadow-md', team.isEliminated && 'opacity-75')}>
       <CardBody className="flex flex-col gap-3">
         <div className="flex items-start justify-between">
           <Link href={routes.team(team.id)} className="flex items-center gap-3">
@@ -22,7 +23,10 @@ export function TeamCard({ team }: { team: TeamSummary }) {
               </p>
             </div>
           </Link>
-          <Badge tone="brand">{teamTierLabel(team.ratingTier)}</Badge>
+          <div className="flex flex-col items-end gap-1">
+            <Badge tone="brand">{teamTierLabel(team.ratingTier)}</Badge>
+            {team.isEliminated && <Badge tone="neutral">已淘汰</Badge>}
+          </div>
         </div>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600">

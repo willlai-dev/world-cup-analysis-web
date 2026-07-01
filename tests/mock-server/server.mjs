@@ -13,8 +13,8 @@ const users = {
 };
 
 const teams = [
-  { id: 'team-fra', nameEn: 'France', nameZh: '法國', fifaCode: 'FRA', continent: 'UEFA', groupName: 'A', coachName: 'Deschamps', ratingTier: 'S', championScore: 88, attackScore: 90, midfieldScore: 85, defenseScore: 84, statusScore: 80, formScore: 82 },
-  { id: 'team-arg', nameEn: 'Argentina', nameZh: '阿根廷', fifaCode: 'ARG', continent: 'CONMEBOL', groupName: 'B', coachName: 'Scaloni', ratingTier: 'S', championScore: 86, attackScore: 88, midfieldScore: 86, defenseScore: 80, statusScore: 83, formScore: 84 },
+  { id: 'team-fra', nameEn: 'France', nameZh: '法國', fifaCode: 'FRA', continent: 'UEFA', groupName: 'A', coachName: 'Deschamps', ratingTier: 'S', championScore: 88, attackScore: 90, midfieldScore: 85, defenseScore: 84, statusScore: 80, formScore: 82, isEliminated: false },
+  { id: 'team-arg', nameEn: 'Argentina', nameZh: '阿根廷', fifaCode: 'ARG', continent: 'CONMEBOL', groupName: 'B', coachName: 'Scaloni', ratingTier: 'S', championScore: 86, attackScore: 88, midfieldScore: 86, defenseScore: 80, statusScore: 83, formScore: 84, isEliminated: true },
 ];
 
 const players = [
@@ -37,10 +37,31 @@ const me = { ...users.USER, profile: { nickname: '小明', avatarUrl: null, bio:
 const champion = {
   runId: 'run-1', status: 'DONE', createdAt: '2026-06-01T00:00:00.000Z', completedAt: '2026-06-01T00:05:00.000Z',
   entries: [
-    { id: 'e1', team: teams[0], rank: 1, championScore: 88, ratingTier: 'S', strengths: ['攻擊強'], risks: ['防線老化'], aiComment: '奪冠熱門。' },
-    { id: 'e2', team: teams[1], rank: 2, championScore: 86, ratingTier: 'S', strengths: ['中場控制'], risks: ['體能'], aiComment: '經驗豐富。' },
+    { id: 'e1', team: teams[0], rank: 1, championScore: 88, ratingTier: 'S', probabilityText: '具備最高奪冠傾向。', strengths: ['攻擊強'], risks: ['防線老化'], aiComment: '奪冠熱門。' },
+    { id: 'e2', team: teams[1], rank: 2, championScore: 86, ratingTier: 'S', probabilityText: '奪冠傾向次高。', strengths: ['中場控制'], risks: ['體能'], aiComment: '經驗豐富。' },
   ],
   finalReport: null, nvidiaReport: null, qwenReport: null,
+};
+
+// AI report with structuredJson for GET /players/:id/rating.
+const playerRatingReport = {
+  id: 'rating-1', entityType: 'PLAYER', reportType: 'PLAYER_HEXAGON_ANALYSIS',
+  provider: 'NVIDIA', model: 'nemotron-super', language: 'zh-Hant',
+  title: 'AI 球員評級', content: '整體評價極高的前鋒。',
+  structuredJson: {
+    overallScore: 92, ratingTier: 'S',
+    strengths: ['速度爆發力強', '射門把握度高'], weaknesses: ['防守參與度低'],
+    roleSummary: '進攻核心，主要負責衝擊防線與終結機會。',
+    injuryRiskLevel: 'LOW', dataLimitations: ['近期出賽樣本有限'],
+  },
+  confidenceScore: 0.86, status: 'DONE', createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z',
+};
+
+// MatchPrediction with likelyScorelines for GET /matches/:id/prediction.
+const matchPrediction = {
+  matchId: 'match-1', homeWinProbability: 46, drawProbability: 27, awayWinProbability: 27,
+  likelyScorelines: [{ score: '2-1', probability: 18 }, { score: '1-1', probability: 15 }, { score: '2-0', probability: 12 }],
+  keyFactors: ['主隊近期狀態佳'], riskNotes: ['關鍵中場可能缺陣'], report: null, sourceUpdatedAt: '2026-07-01T00:00:00.000Z',
 };
 
 function ok(data, meta) {
@@ -48,6 +69,14 @@ function ok(data, meta) {
 }
 function paginated(items) {
   return ok(items, { pagination: { page: 1, pageSize: 20, total: items.length, totalPages: 1 } });
+}
+
+// Honor ?eliminated=true|false. `pick` maps an item to its team for the flag.
+function filterEliminated(items, url, pick = (x) => x) {
+  const v = url.searchParams.get('eliminated');
+  if (v === 'true') return items.filter((x) => pick(x)?.isEliminated === true);
+  if (v === 'false') return items.filter((x) => pick(x)?.isEliminated !== true);
+  return items;
 }
 function errBody(code, message) {
   return JSON.stringify({ data: null, error: { code, message } });
@@ -86,7 +115,8 @@ function readBody(req) {
 }
 
 const server = createServer(async (req, res) => {
-  const { pathname } = new URL(req.url, `http://localhost:${PORT}`);
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const { pathname } = url;
   const method = req.method ?? 'GET';
   const path = pathname.replace(/^\/api/, '');
 
@@ -163,10 +193,11 @@ const server = createServer(async (req, res) => {
   if (path.startsWith('/favorites/')) return send(res, 200, ok({ success: true }));
 
   if (path === '/matches') return send(res, 200, paginated(matches));
-  if (/^\/matches\/[^/]+\/(analysis|prediction|post-match-report)$/.test(path)) return send(res, 200, ok(null));
+  if (/^\/matches\/[^/]+\/prediction$/.test(path)) return send(res, 200, ok(matchPrediction));
+  if (/^\/matches\/[^/]+\/(analysis|post-match-report)$/.test(path)) return send(res, 200, ok(null));
   if (/^\/matches\/[^/]+$/.test(path)) return send(res, 200, ok({ ...matches[0], events: [] }));
 
-  if (path === '/teams') return send(res, 200, paginated(teams));
+  if (path === '/teams') return send(res, 200, paginated(filterEliminated(teams, url)));
   // /teams/:id/players omits nested team (per contract). JSON.stringify drops undefined.
   if (/^\/teams\/[^/]+\/players$/.test(path))
     return send(res, 200, ok(players.map((p) => ({ ...p, team: undefined }))));
@@ -174,12 +205,34 @@ const server = createServer(async (req, res) => {
   if (/^\/teams\/[^/]+\/analysis$/.test(path)) return send(res, 200, ok(null));
   if (/^\/teams\/[^/]+$/.test(path)) return send(res, 200, ok(teams[0]));
 
-  if (path === '/players') return send(res, 200, paginated(players));
-  if (/^\/players\/[^/]+\/(analysis|rating)$/.test(path)) return send(res, 200, ok(null));
+  if (path === '/players') return send(res, 200, paginated(filterEliminated(players, url, (p) => p.team)));
+  if (/^\/players\/[^/]+\/rating$/.test(path)) return send(res, 200, ok(playerRatingReport));
+  if (/^\/players\/[^/]+\/analysis$/.test(path)) return send(res, 200, ok(null));
   if (/^\/players\/[^/]+$/.test(path)) return send(res, 200, ok(players[0]));
 
   if (path === '/news') return send(res, 200, paginated(news));
+  if (/^\/news\/[^/]+\/translate$/.test(path) && method === 'POST') {
+    // PREMIUM-only. USER gets 403 (matches the contract).
+    if (role !== 'PREMIUM') return send(res, 403, errBody('FORBIDDEN', '此功能僅限高級會員使用。'));
+    return send(res, 200, ok({
+      ...newsDetail,
+      titleZh: '【譯】France name strong squad',
+      translatedContentZh: '這是翻譯後的繁體中文內容。',
+      translationStatus: 'DONE',
+    }));
+  }
   if (/^\/news\/[^/]+$/.test(path)) return send(res, 200, ok(newsDetail));
+
+  // POST /ai/chat — USER/PREMIUM (ADMIN already blocked above). Echoes the question.
+  if (path === '/ai/chat' && method === 'POST') {
+    const body = await readBody(req);
+    return send(res, 200, ok({
+      answer: `模擬回答：${body.question ?? ''}`,
+      provider: 'NVIDIA',
+      model: 'mock-model',
+      sourceUpdatedAt: '2026-06-01T00:00:00.000Z',
+    }));
+  }
 
   if (path === '/champion-predictions/latest') return send(res, 200, ok(champion));
 
