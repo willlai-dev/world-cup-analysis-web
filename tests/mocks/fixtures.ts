@@ -1,5 +1,6 @@
 import type {
   AiReport,
+  AiUsageStats,
   ChampionPredictionResponse,
   HomeHighlightsResponse,
   MatchPrediction,
@@ -234,6 +235,114 @@ export const playerRatingReportFixture: AiReport = {
   status: 'DONE',
   createdAt: '2026-06-01T00:00:00.000Z',
   updatedAt: '2026-06-01T00:00:00.000Z',
+};
+
+// AiReport for GET /news/:id/analysis (Phase 3 §4, NEWS_IMPACT_ANALYSIS).
+export const newsAnalysisReportFixture: AiReport = {
+  id: 'news-analysis-1',
+  entityType: 'NEWS',
+  entityId: 'news-1',
+  reportType: 'NEWS_IMPACT_ANALYSIS',
+  provider: 'NVIDIA',
+  model: 'nemotron-super',
+  language: 'zh-Hant',
+  title: null,
+  content: null,
+  structuredJson: {
+    impactSummaryZh: '（推論）此傷病消息可能影響法國中場輪換。',
+    affectedTeams: [{ name: 'France', impact: '（推論）中場調度受限。', direction: 'NEGATIVE' }],
+    affectedPlayers: [{ name: 'Mbappe', impact: '（推論）需承擔更多進攻。', direction: 'UNKNOWN' }],
+    confidenceScore: 60,
+    dataLimitations: ['消息來源單一'],
+  },
+  confidenceScore: 60,
+  status: 'DONE',
+  createdAt: '2026-06-02T00:00:00.000Z',
+  updatedAt: '2026-06-02T00:00:00.000Z',
+};
+
+// AiReport for GET /players/:id/analysis when it returns PLAYER_STATUS_SUMMARY (§5).
+export const playerStatusReportFixture: AiReport = {
+  id: 'player-status-1',
+  entityType: 'PLAYER',
+  entityId: 'player-mbappe',
+  reportType: 'PLAYER_STATUS_SUMMARY',
+  provider: 'NVIDIA',
+  model: 'nemotron-super',
+  language: 'zh-Hant',
+  title: null,
+  content: null,
+  structuredJson: {
+    statusSummaryZh: '（推論）近兩場狀態回穩，無明顯傷病疑慮。',
+    injuryRiskLevel: 'LOW',
+    formScore: 82,
+    dataLimitations: ['近期出賽樣本有限'],
+  },
+  confidenceScore: 0.7,
+  status: 'DONE',
+  createdAt: '2026-06-02T00:00:00.000Z',
+  updatedAt: '2026-06-02T00:00:00.000Z',
+};
+
+// ChampionPredictionResponse with Phase 3 §2/§3 fields populated (real mode).
+export const championWithDivergenceFixture: ChampionPredictionResponse = {
+  ...championFixture,
+  divergence: {
+    computable: true,
+    summary: '冠軍首選分歧：NVIDIA 看好 France，Qwen 看好 Argentina；名次差最大：Argentina。',
+    teamDeltas: [
+      { teamName: 'France', nvidiaRank: 1, qwenRank: 2, rankDelta: 1 },
+      { teamName: 'Argentina', nvidiaRank: 4, qwenRank: 1, rankDelta: 3 },
+      { teamName: 'Spain', nvidiaRank: 3, qwenRank: null, rankDelta: null },
+    ],
+  },
+  polishedReport: {
+    id: 'polish-1',
+    entityType: 'CHAMPION_PREDICTION',
+    entityId: 'run-1',
+    reportType: 'FINAL_REPORT_POLISH',
+    provider: 'QWEN',
+    model: 'qwen-plus',
+    language: 'zh-Hant',
+    title: '冠軍預測彙整報告',
+    content: '## 冠軍預測\n\n**France** 具備最高奪冠傾向。\n\n- 攻擊火力強\n- 陣容深度足',
+    structuredJson: null,
+    confidenceScore: 0.8,
+    status: 'DONE',
+    createdAt: '2026-06-01T00:05:00.000Z',
+    updatedAt: '2026-06-01T00:05:00.000Z',
+  },
+};
+
+// AiUsageStats for GET /admin/ai-usage (Phase 3 §6).
+export const aiUsageFixture: AiUsageStats = {
+  from: '2026-06-25T00:00:00.000Z',
+  to: '2026-07-02T00:00:00.000Z',
+  totals: { calls: 120, done: 110, failed: 10, inputTokens: 45000, outputTokens: 32000 },
+  byTaskType: [
+    { taskType: 'GENERAL_CHAT', calls: 60 },
+    { taskType: 'DEEP_CHAT', calls: 30 },
+    { taskType: 'NEWS_TRANSLATION', calls: 20 },
+    { taskType: 'CHAMPION_RECALCULATE', calls: 10 },
+  ],
+  byProvider: [
+    { provider: 'NVIDIA', calls: 70 },
+    { provider: 'QWEN', calls: 40 },
+    { provider: 'PROGRAM_RULE', calls: 10 },
+  ],
+  byStatus: [
+    { status: 'DONE', calls: 110 },
+    { status: 'FAILED', calls: 10 },
+  ],
+  byDay: [
+    { day: '2026-06-30T00:00:00.000Z', calls: 40 },
+    { day: '2026-07-01T00:00:00.000Z', calls: 50 },
+    { day: '2026-07-02T00:00:00.000Z', calls: 30 },
+  ],
+  topUsers: [
+    { userId: 'u-premium', email: 'premium@example.com', displayName: 'Premium User', calls: 55 },
+    { userId: 'u-user', email: 'user@example.com', displayName: 'Normal User', calls: 35 },
+  ],
 };
 
 // MatchPrediction with likelyScorelines for GET /matches/:id/prediction.

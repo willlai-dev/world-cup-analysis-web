@@ -19,6 +19,7 @@ export const routes = {
     accounts: '/admin/accounts',
     createAccount: '/admin/accounts/create',
     registerAdmin: '/admin/register-admin',
+    aiUsage: '/admin/ai-usage',
   },
 } as const;
 

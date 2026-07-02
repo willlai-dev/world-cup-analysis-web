@@ -2,19 +2,11 @@
 
 import { useState } from 'react';
 import { AiSourceMeta } from '@/components/ai/AiSourceMeta';
+import { AiQuotaNotice } from '@/components/ai/AiQuotaNotice';
 import { Button } from '@/components/ui/Button';
-import { ApiError } from '@/lib/api-client';
+import { aiErrorMessage, isQuotaError } from '@/lib/ai';
 import { CHAT_EXAMPLES, CHAT_QUESTION_MAX, COPY } from '@/lib/constants';
 import { useChatStore } from '@/features/ai/chat-store';
-
-function chatErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.isForbidden) return COPY.forbidden;
-    if (error.code === 'NETWORK_ERROR') return COPY.genericError;
-    return error.message || COPY.chatError;
-  }
-  return COPY.chatError;
-}
 
 // View only. The thread (turns + in-flight request) lives in a module-level store,
 // so it survives this component unmounting — whether the modal closes, the user
@@ -73,7 +65,12 @@ export function GeneralFloatingChat() {
         )}
       </div>
 
-      {isError && <p className="text-sm text-red-600">{chatErrorMessage(error)}</p>}
+      {isError &&
+        (isQuotaError(error) ? (
+          <AiQuotaNotice error={error} />
+        ) : (
+          <p className="text-sm text-red-600">{aiErrorMessage(error, COPY.chatError)}</p>
+        ))}
 
       {/* Composer */}
       <form

@@ -39,6 +39,12 @@ export function PlayerCard({ player }: { player: PlayerSummary }) {
             <dt>總分</dt>
             <dd className="font-medium text-slate-800">{player.overallScore ?? '—'}</dd>
           </div>
+          {/* §5: injuryRiskLevel/formScore are written back onto PlayerSummary; the
+              risk badge sits in the header, so show近期狀態 (formScore) here. */}
+          <div className="flex justify-between">
+            <dt>近期狀態</dt>
+            <dd className="font-medium text-slate-800">{player.formScore ?? '—'}</dd>
+          </div>
         </dl>
 
         <div className="flex items-center justify-between">

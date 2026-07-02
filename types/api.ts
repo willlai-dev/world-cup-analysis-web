@@ -280,6 +280,21 @@ export type ChampionPredictionEntry = {
   aiComment?: string | null;
 };
 
+// Phase 3 §2: model-divergence panel carried inline on the champion response.
+// `computable=false` (always so in AI_MOCK_MODE) → hide the panel / show raw reports.
+export type ChampionTeamDelta = {
+  teamName: string;
+  nvidiaRank?: number | null; // NVIDIA rank; null when not listed by that model
+  qwenRank?: number | null; // Qwen rank
+  rankDelta?: number | null; // |difference| when both models ranked the team
+};
+
+export type ChampionDivergence = {
+  computable: boolean;
+  summary: string; // ready-to-display Chinese comparison text
+  teamDeltas: ChampionTeamDelta[];
+};
+
 export type ChampionPredictionResponse = {
   runId: string;
   status: JobStatus;
@@ -289,6 +304,40 @@ export type ChampionPredictionResponse = {
   finalReport?: AiReport | null;
   nvidiaReport?: AiReport | null;
   qwenReport?: AiReport | null;
+  // Phase 3 §2 / §3 — both optional; older runs / mock mode leave them null.
+  divergence?: ChampionDivergence | null;
+  // reportType = "FINAL_REPORT_POLISH"; content is 繁中 markdown.
+  polishedReport?: AiReport | null;
+};
+
+// ----- Phase 3 §4: News impact analysis (GET /news/:id/analysis) -----
+
+export type ImpactDirection = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'UNKNOWN';
+
+export type NewsImpactEntity = {
+  name: string;
+  impact: string;
+  direction: ImpactDirection;
+};
+
+// AiReport.structuredJson shape for the NEWS_IMPACT_ANALYSIS report.
+export type NewsAnalysisStructured = {
+  impactSummaryZh: string | null;
+  affectedTeams: NewsImpactEntity[];
+  affectedPlayers: NewsImpactEntity[];
+  confidenceScore: number | null;
+  dataLimitations: string[];
+};
+
+// ----- Phase 3 §5: Player status / injury summary (GET /players/:id/analysis) -----
+
+// structuredJson shape for the PLAYER_STATUS_SUMMARY report (distinct from the
+// PLAYER_HEXAGON_ANALYSIS the same endpoint may still return — branch on reportType).
+export type PlayerStatusSummaryStructured = {
+  statusSummaryZh: string | null;
+  injuryRiskLevel: RiskLevel | null;
+  formScore: number | null;
+  dataLimitations: string[];
 };
 
 export type ChatAnswer = {
@@ -305,6 +354,23 @@ export type ChatRole = 'user' | 'assistant';
 export type ChatMessage = {
   role: ChatRole;
   content: string;
+};
+
+// ----- Phase 3 §1: AI quota (HTTP 429, error.code = "AI_QUOTA_EXCEEDED") -----
+
+export type AiQuotaKey =
+  | 'GENERAL_CHAT'
+  | 'DEEP_CHAT'
+  | 'NEWS_TRANSLATION'
+  | 'CHAMPION_RECALCULATE';
+
+// Lives in ApiError.details on a 429. Read limit/used/resetAt from here — never
+// hardcode the numbers (backend env controls them and they may change).
+export type AiQuotaDetails = {
+  quotaKey: AiQuotaKey;
+  limit: number;
+  used: number;
+  resetAt: string; // ISO — next reset time
 };
 
 // ----- Composite responses -----
@@ -331,6 +397,30 @@ export type RefreshMeta = {
 export type FavoritesResponse = {
   teams: TeamSummary[];
   players: PlayerSummary[];
+};
+
+// ----- Phase 3 §6: Admin AI usage stats (GET /admin/ai-usage) -----
+
+export type AiUsageStats = {
+  from: string;
+  to: string;
+  totals: {
+    calls: number;
+    done: number;
+    failed: number;
+    inputTokens: number;
+    outputTokens: number;
+  };
+  byTaskType: { taskType: string; calls: number }[];
+  byProvider: { provider: string; calls: number }[]; // includes PROGRAM_RULE
+  byStatus: { status: string; calls: number }[];
+  byDay: { day: string; calls: number }[]; // day = 00:00 UTC
+  topUsers: {
+    userId: string;
+    email: string | null;
+    displayName: string | null;
+    calls: number;
+  }[];
 };
 
 // Favorite mutations always return { success: true } today; tolerate FavoritesResponse too.
@@ -376,3 +466,13 @@ export type AdminRegisterAdminRequest = {
 export type AdminUpdateRoleRequest = { role: UserRole };
 
 export type GeneralChatRequest = { question: string };
+
+// Deep-chat (per-entity) request body — only `question` is whitelisted (no history).
+export type DeepChatRequest = { question: string };
+
+// Admin AI-usage query params (all optional; defaults to the last 7 days).
+export type AiUsageQuery = {
+  from?: string; // ISO
+  to?: string; // ISO
+  taskType?: string;
+};

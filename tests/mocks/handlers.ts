@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import {
   championFixture,
+  championWithDivergenceFixture,
   homeHighlightsFixture,
   matchFixtures,
   matchPredictionFixture,
@@ -53,9 +54,16 @@ export const handlers = [
   http.get(`${API}/players/:id`, () => ok(playerFixtures[0])),
   http.get(`${API}/players/:id/analysis`, () => ok(null)),
   http.get(`${API}/players/:id/rating`, () => ok(playerRatingReportFixture)),
+  // Phase 3 §2 deep-chat — PREMIUM; defaults to a simple grounded answer.
+  http.post(`${API}/players/:id/deep-chat`, () => ok(deepChatAnswer('球員'))),
+  http.post(`${API}/teams/:id/deep-chat`, () => ok(deepChatAnswer('球隊'))),
+  http.post(`${API}/matches/:id/deep-chat`, () => ok(deepChatAnswer('賽事'))),
 
   http.get(`${API}/news`, () => paginated(newsFixtures)),
   http.get(`${API}/news/:id`, () => ok(newsFixtures[0])),
+  // Phase 3 §4 impact analysis — null until generated.
+  http.get(`${API}/news/:id/analysis`, () => ok(null)),
+  http.post(`${API}/news/:id/deep-chat`, () => ok(deepChatAnswer('新聞'))),
   http.post(`${API}/news/:id/translate`, () =>
     ok({
       ...newsFixtures[0],
@@ -85,12 +93,25 @@ export const handlers = [
   }),
 
   http.get(`${API}/champion-predictions/latest`, () => ok(championFixture)),
+  http.post(`${API}/champion-predictions/recalculate`, () => ok(championWithDivergenceFixture)),
+  http.post(`${API}/champion-predictions/deep-chat`, () => ok(deepChatAnswer('冠軍預測'))),
 
   http.get(`${API}/users/me`, () => ok(meFixture)),
   http.get(`${API}/users/me/favorites`, () => ok({ teams: [], players: [] })),
 
   // Admin endpoints default to 403 for the default USER session.
   http.get(`${API}/admin/users`, () => fail(403, 'FORBIDDEN', '權限不足')),
+  http.get(`${API}/admin/ai-usage`, () => fail(403, 'FORBIDDEN', '權限不足')),
 ];
+
+// A deterministic deep-chat answer for a given entity scope.
+function deepChatAnswer(scope: string) {
+  return {
+    answer: `模擬深層回答（${scope}）`,
+    provider: 'NVIDIA' as const,
+    model: 'mock-deep',
+    sourceUpdatedAt: '2026-06-01T00:00:00.000Z',
+  };
+}
 
 export { ok, fail, paginated, API };

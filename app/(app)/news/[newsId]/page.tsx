@@ -1,11 +1,12 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useNewsItem } from '@/features/news/use-news';
+import { useNewsAnalysis, useNewsItem } from '@/features/news/use-news';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { NewsTranslationPanel } from '@/components/ai/NewsTranslationPanel';
-import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
+import { NewsAnalysisPanel } from '@/components/ai/NewsAnalysisPanel';
+import { DeepChat } from '@/components/ai/DeepChat';
 import { LoadingState, ErrorState } from '@/components/ui/states';
 import { NEWS_TAG_TONES } from '@/lib/constants';
 import { formatDateTime, newsCategoryLabel } from '@/lib/formatters';
@@ -13,6 +14,7 @@ import { formatDateTime, newsCategoryLabel } from '@/lib/formatters';
 export default function NewsDetailPage() {
   const { newsId } = useParams<{ newsId: string }>();
   const news = useNewsItem(newsId);
+  const analysis = useNewsAnalysis(newsId);
 
   if (news.isLoading) return <LoadingState />;
   if (news.isError) return <ErrorState error={news.error} onRetry={() => news.refetch()} />;
@@ -60,10 +62,13 @@ export default function NewsDetailPage() {
         </CardBody>
       </Card>
 
+      {/* §4 impact analysis: hidden until generated (null-tolerant). */}
+      <NewsAnalysisPanel report={analysis.data} isLoading={analysis.isLoading} />
+
       {/* Translation is PREMIUM-only; USER sees a can't-use notice via PremiumGate. */}
       <NewsTranslationPanel news={n} />
 
-      <DeepChatPlaceholder context={n.titleEn} />
+      <DeepChat endpoint={`/news/${n.id}/deep-chat`} context={n.titleEn} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 const ADMIN_NAV = [
   { href: routes.admin.accounts, label: '帳號管理' },
+  { href: routes.admin.aiUsage, label: 'AI 用量' },
   { href: routes.admin.registerAdmin, label: '註冊 Admin' },
 ];
 
