@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/Badge';
 import { FavoriteButton } from '@/components/cards/FavoriteButton';
 import { AiReportCard } from '@/components/ai/AiReportCard';
 import { PlayerRatingCard } from '@/components/ai/PlayerRatingCard';
+import { PlayerStatusCard } from '@/components/ai/PlayerStatusCard';
 import { InjuryRiskBadge } from '@/components/ai/InjuryRiskBadge';
-import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
+import { DeepChat } from '@/components/ai/DeepChat';
 import { AbilityMeter } from '@/components/charts/AbilityMeter';
 import { PlayerHexagonChart, type HexAxis } from '@/components/charts/PlayerHexagonChart';
 import { LoadingState, ErrorState } from '@/components/ui/states';
@@ -85,9 +86,15 @@ export default function PlayerDetailPage() {
 
       <PlayerRatingCard report={rating.data} isLoading={rating.isLoading} />
 
-      <AiReportCard title="AI 球員分析" report={analysis.data} isLoading={analysis.isLoading} />
+      {/* §5: /analysis may now return a PLAYER_STATUS_SUMMARY (status/injury) or the
+          older PLAYER_HEXAGON_ANALYSIS — branch on reportType. */}
+      {analysis.data?.reportType === 'PLAYER_STATUS_SUMMARY' ? (
+        <PlayerStatusCard report={analysis.data} />
+      ) : (
+        <AiReportCard title="AI 球員分析" report={analysis.data} isLoading={analysis.isLoading} />
+      )}
 
-      <DeepChatPlaceholder context={playerName(p)} />
+      <DeepChat endpoint={`/players/${p.id}/deep-chat`} context={playerName(p)} />
     </div>
   );
 }

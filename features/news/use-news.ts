@@ -3,7 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiData } from '@/lib/api-client';
 import { cleanParams, fetchList } from '@/lib/list';
-import type { NewsCategory, NewsDetail, NewsSummary } from '@/types/api';
+import type { AiReport, NewsCategory, NewsDetail, NewsSummary } from '@/types/api';
 
 export type NewsListParams = {
   page?: number;
@@ -29,6 +29,17 @@ export function useNewsItem(newsId: string) {
   return useQuery({
     queryKey: ['news', 'detail', newsId],
     queryFn: ({ signal }) => apiData<NewsDetail>(`/news/${newsId}`, { signal }),
+    enabled: !!newsId,
+  });
+}
+
+// GET /news/:id/analysis — USER/PREMIUM. Phase 3 §4 impact analysis; returns
+// null until the daily job generates it (only recent, tagged, summarized news),
+// so the panel must tolerate null and simply hide.
+export function useNewsAnalysis(newsId: string) {
+  return useQuery({
+    queryKey: ['news', 'analysis', newsId],
+    queryFn: ({ signal }) => apiData<AiReport | null>(`/news/${newsId}/analysis`, { signal }),
     enabled: !!newsId,
   });
 }

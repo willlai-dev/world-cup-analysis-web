@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/Badge';
 import { TeamFlag } from '@/components/cards/TeamFlag';
 import { FavoriteButton } from '@/components/cards/FavoriteButton';
 import { AiReportCard } from '@/components/ai/AiReportCard';
-import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
+import { DeepChat } from '@/components/ai/DeepChat';
 import { ScoreBar } from '@/components/charts/ScoreBar';
 import { LoadingState, ErrorState } from '@/components/ui/states';
 import { parseMatchAnalysis, predictionScorelines, structuredSource } from '@/lib/ai';
@@ -162,7 +162,10 @@ export default function MatchDetailPage() {
         </CardBody>
       </Card>
 
-      <DeepChatPlaceholder context={`${teamName(m.homeTeam)} vs ${teamName(m.awayTeam)}`} />
+      <DeepChat
+        endpoint={`/matches/${m.id}/deep-chat`}
+        context={`${teamName(m.homeTeam)} vs ${teamName(m.awayTeam)}`}
+      />
     </div>
   );
 }

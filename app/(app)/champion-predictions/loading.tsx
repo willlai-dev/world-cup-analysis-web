@@ -1,4 +1,4 @@
-import { PageHeadingSkeleton, CardGridSkeleton, Skeleton } from '@/components/ui/states';
+import { PageHeadingSkeleton, Skeleton } from '@/components/ui/states';
 
 export default function Loading() {
   return (

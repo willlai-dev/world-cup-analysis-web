@@ -9,7 +9,7 @@ import { FavoriteButton } from '@/components/cards/FavoriteButton';
 import { PlayerCard } from '@/components/cards/PlayerCard';
 import { MatchCard } from '@/components/cards/MatchCard';
 import { AiReportCard } from '@/components/ai/AiReportCard';
-import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
+import { DeepChat } from '@/components/ai/DeepChat';
 import { AbilityMeter } from '@/components/charts/AbilityMeter';
 import { LoadingState, ErrorState, EmptyState } from '@/components/ui/states';
 import { teamName, teamTierLabel, eliminationLabel } from '@/lib/formatters';
@@ -107,7 +107,7 @@ export default function TeamDetailPage() {
         </CardBody>
       </Card>
 
-      <DeepChatPlaceholder context={teamName(t)} />
+      <DeepChat endpoint={`/teams/${t.id}/deep-chat`} context={teamName(t)} />
     </div>
   );
 }

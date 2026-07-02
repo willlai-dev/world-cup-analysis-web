@@ -1,23 +1,38 @@
 'use client';
 
-import { useLatestChampionPrediction } from '@/features/champion-predictions/use-champion';
+import {
+  useIsRecalculatingChampionPrediction,
+  useLatestChampionPrediction,
+  useRecalculateChampionPrediction,
+} from '@/features/champion-predictions/use-champion';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
+import { Markdown } from '@/components/ui/Markdown';
 import { TeamFlag } from '@/components/cards/TeamFlag';
 import { AiReportCard } from '@/components/ai/AiReportCard';
-import { DeepChatPlaceholder } from '@/components/ai/DeepChatPlaceholder';
+import { AiQuotaNotice } from '@/components/ai/AiQuotaNotice';
+import { AiSourceMeta } from '@/components/ai/AiSourceMeta';
+import { ChampionDivergencePanel } from '@/components/ai/ChampionDivergencePanel';
+import { DeepChat } from '@/components/ai/DeepChat';
 import { PremiumGate } from '@/components/auth/RoleGate';
 import { useAuth } from '@/features/auth/use-auth';
+import { aiErrorMessage, isQuotaError } from '@/lib/ai';
 import { COPY } from '@/lib/constants';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { LoadingState, ErrorState, EmptyState } from '@/components/ui/states';
 import { teamName, teamTierLabel, eliminationLabel, formatDateTime } from '@/lib/formatters';
-import type { ChampionPredictionEntry } from '@/types/api';
+import type { AiReport, ChampionPredictionEntry } from '@/types/api';
 
 export default function ChampionPredictionsPage() {
   const query = useLatestChampionPrediction();
+  const recalc = useRecalculateChampionPrediction();
+  // Also true when a run started from a previous mount (e.g. before navigating
+  // away and back) is still in flight — the request itself keeps running either
+  // way, this just keeps the button/status text honest across that remount.
+  const isRecalculating = useIsRecalculatingChampionPrediction();
+  const recalcBusy = recalc.isPending || isRecalculating;
   const { isPremium } = useAuth();
 
   return (
@@ -27,16 +42,35 @@ export default function ChampionPredictionsPage() {
         description="AI 冠軍預測排行、奪冠傾向與模型報告。"
         action={
           // PREMIUM-only. USER sees a disabled button that says it can't be used.
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            title={isPremium ? 'Phase 3 開放' : COPY.forbidden}
-          >
-            {isPremium ? '重新跑預測' : '重新跑預測（高級會員）'}
-          </Button>
+          isPremium ? (
+            <Button
+              variant="outline"
+              size="sm"
+              isLoading={recalcBusy}
+              onClick={() => recalc.mutate()}
+            >
+              {recalcBusy ? '運算中…' : '重新跑預測'}
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" disabled title={COPY.forbidden}>
+              重新跑預測（高級會員）
+            </Button>
+          )
         }
       />
+
+      {/* Recalculate feedback: quota 429 gets the dedicated notice; other errors a line. */}
+      {recalc.isError &&
+        (isQuotaError(recalc.error) ? (
+          <AiQuotaNotice error={recalc.error} />
+        ) : (
+          <p className="text-sm text-red-600">{aiErrorMessage(recalc.error)}</p>
+        ))}
+      {recalcBusy && (
+        <p className="text-sm text-slate-500" role="status">
+          正在重新運算冠軍預測，最長可能需要約 5 分鐘，可以先切換到其他頁面，完成後回來即可看到最新結果…
+        </p>
+      )}
 
       {query.isLoading ? (
         <LoadingState />
@@ -70,7 +104,13 @@ export default function ChampionPredictionsPage() {
             </CardBody>
           </Card>
 
-          {/* Three model reports as tabs (§4). 模型 A/B are PREMIUM-only. */}
+          {/* §2 Model divergence — only when computable (mock/old runs hide it). */}
+          {query.data.divergence?.computable && (
+            <ChampionDivergencePanel divergence={query.data.divergence} />
+          )}
+
+          {/* Model reports as tabs (§3). 彙整 prefers the polished markdown report;
+              模型 A/B are PREMIUM-only cross-model analysis. */}
           <Card>
             <CardHeader>
               <CardTitle>模型報告</CardTitle>
@@ -81,7 +121,12 @@ export default function ChampionPredictionsPage() {
                   {
                     id: 'final',
                     label: '彙整',
-                    content: <AiReportCard title="彙整報告" report={query.data.finalReport} />,
+                    content: (
+                      <FinalReportTab
+                        polished={query.data.polishedReport}
+                        finalReport={query.data.finalReport}
+                      />
+                    ),
                   },
                   {
                     id: 'nvidia',
@@ -106,11 +151,40 @@ export default function ChampionPredictionsPage() {
             </CardBody>
           </Card>
 
-          <DeepChatPlaceholder context="冠軍預測" />
+          <DeepChat endpoint="/champion-predictions/deep-chat" context="冠軍預測" />
         </>
       )}
     </div>
   );
+}
+
+// §3: prefer polishedReport.content (markdown); fall back to the raw finalReport.
+function FinalReportTab({
+  polished,
+  finalReport,
+}: {
+  polished?: AiReport | null;
+  finalReport?: AiReport | null;
+}) {
+  const markdown = polished?.content?.trim();
+  if (markdown) {
+    return (
+      <Card data-testid="polished-report">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>{polished?.title || '彙整報告（潤稿）'}</CardTitle>
+          <AiSourceMeta
+            provider={polished!.provider}
+            model={polished!.model}
+            updatedAt={polished!.updatedAt}
+          />
+        </CardHeader>
+        <CardBody>
+          <Markdown content={markdown} />
+        </CardBody>
+      </Card>
+    );
+  }
+  return <AiReportCard title="彙整報告" report={finalReport} />;
 }
 
 function ChampionEntryRow({ entry }: { entry: ChampionPredictionEntry }) {

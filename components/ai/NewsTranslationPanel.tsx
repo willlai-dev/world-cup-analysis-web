@@ -2,23 +2,15 @@
 
 import { useState } from 'react';
 import { PremiumGate } from '@/components/auth/RoleGate';
+import { AiQuotaNotice } from '@/components/ai/AiQuotaNotice';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useTranslateNews } from '@/features/news/use-news';
-import { ApiError } from '@/lib/api-client';
+import { aiErrorMessage, isQuotaError } from '@/lib/ai';
 import { COPY } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { NewsDetail } from '@/types/api';
-
-function translateErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.isForbidden) return COPY.forbidden;
-    if (error.code === 'NETWORK_ERROR') return COPY.genericError;
-    return error.message || COPY.translateFailed;
-  }
-  return COPY.translateFailed;
-}
 
 // PREMIUM-only news translation. POST /news/:id/translate returns the full updated
 // detail; the mutation seeds the cache so `news` re-renders with the new translation.
@@ -51,11 +43,15 @@ export function NewsTranslationPanel({ news }: { news: NewsDetail }) {
         </CardHeader>
         <CardBody className="flex flex-col gap-3">
           {translate.isPending || serverPending ? (
-            <p className="text-sm text-slate-500" role="status">
-              {COPY.translatePending}
-            </p>
+            <TranslatingIndicator />
           ) : translate.isError ? (
-            <p className="text-sm text-red-600">{translateErrorMessage(translate.error)}</p>
+            isQuotaError(translate.error) ? (
+              <AiQuotaNotice error={translate.error} />
+            ) : (
+              <p className="text-sm text-red-600">
+                {aiErrorMessage(translate.error, COPY.translateFailed)}
+              </p>
+            )
           ) : hasTranslation ? (
             <div className="flex flex-col gap-2">
               {current.contentSnippet && (
@@ -94,6 +90,27 @@ export function NewsTranslationPanel({ news }: { news: NewsDetail }) {
         </CardBody>
       </Card>
     </PremiumGate>
+  );
+}
+
+// Translation can run 30–90 s (longer for a long article), so give it a clear,
+// animated "working" state: a spinner with the pending copy, shimmering
+// placeholder lines standing in for the incoming text, and a hint that it may
+// take a while. role="status" keeps it announced to assistive tech.
+function TranslatingIndicator() {
+  return (
+    <div role="status" aria-live="polite" className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 text-sm text-slate-600">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+        <span>{COPY.translatePending}</span>
+      </div>
+      <div className="flex flex-col gap-2" aria-hidden>
+        <span className="h-3.5 w-full animate-pulse rounded bg-slate-200/80" />
+        <span className="h-3.5 w-11/12 animate-pulse rounded bg-slate-200/80 [animation-delay:150ms]" />
+        <span className="h-3.5 w-4/5 animate-pulse rounded bg-slate-200/80 [animation-delay:300ms]" />
+      </div>
+      <p className="text-xs text-slate-400">翻譯需要一些時間，請耐心稍候，勿關閉此頁面。</p>
+    </div>
   );
 }
 

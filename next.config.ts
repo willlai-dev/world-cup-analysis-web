@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     // and ai/chat handlers that need a longer 120-second timeout to avoid the
     // default ~30-second proxy socket timeout on dev-server rewrites).
     return {
+      beforeFiles: [],
+      afterFiles: [],
       fallback: [{ source: '/api/:path*', destination: `${BACKEND_API_URL}/:path*` }],
     };
   },

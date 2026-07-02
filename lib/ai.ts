@@ -1,13 +1,21 @@
 // Helpers for AI payloads: defensively parse AiReport.structuredJson (typed as
 // `unknown`) into view models, and derive the "示範/降級" mode label from provider.
+import { ApiError } from '@/lib/api-client';
+import { COPY } from '@/lib/constants';
 import type {
   AiProvider,
+  AiQuotaDetails,
+  AiQuotaKey,
   AiReport,
+  ImpactDirection,
   LikelyScoreline,
   MatchAnalysisKeyPlayer,
   MatchAnalysisStructured,
+  NewsAnalysisStructured,
+  NewsImpactEntity,
   PlayerRatingStructured,
   PlayerRatingTier,
+  PlayerStatusSummaryStructured,
   RiskLevel,
 } from '@/types/api';
 
@@ -65,6 +73,56 @@ export function parseMatchAnalysis(json: unknown): MatchAnalysisStructured {
   };
 }
 
+const IMPACT_DIRECTIONS = new Set<ImpactDirection>([
+  'POSITIVE',
+  'NEGATIVE',
+  'NEUTRAL',
+  'UNKNOWN',
+]);
+
+function asDirection(value: unknown): ImpactDirection {
+  return typeof value === 'string' && IMPACT_DIRECTIONS.has(value as ImpactDirection)
+    ? (value as ImpactDirection)
+    : 'UNKNOWN';
+}
+
+function impactEntities(value: unknown): NewsImpactEntity[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((x): NewsImpactEntity | null => {
+      const rec = asRecord(x);
+      const name = strOrNull(rec.name);
+      return name
+        ? { name, impact: strOrNull(rec.impact) ?? '', direction: asDirection(rec.direction) }
+        : null;
+    })
+    .filter((x): x is NewsImpactEntity => x !== null);
+}
+
+// GET /news/:id/analysis → AiReportDto.structuredJson (NEWS_IMPACT_ANALYSIS, §4).
+export function parseNewsAnalysis(json: unknown): NewsAnalysisStructured {
+  const r = asRecord(json);
+  return {
+    impactSummaryZh: strOrNull(r.impactSummaryZh),
+    affectedTeams: impactEntities(r.affectedTeams),
+    affectedPlayers: impactEntities(r.affectedPlayers),
+    confidenceScore: numOrNull(r.confidenceScore),
+    dataLimitations: strArray(r.dataLimitations),
+  };
+}
+
+// GET /players/:id/analysis when reportType === "PLAYER_STATUS_SUMMARY" (§5).
+export function parsePlayerStatusSummary(json: unknown): PlayerStatusSummaryStructured {
+  const r = asRecord(json);
+  return {
+    statusSummaryZh: strOrNull(r.statusSummaryZh),
+    injuryRiskLevel:
+      typeof r.injuryRiskLevel === 'string' ? (r.injuryRiskLevel as RiskLevel) : null,
+    formScore: numOrNull(r.formScore),
+    dataLimitations: strArray(r.dataLimitations),
+  };
+}
+
 // "資料有限推估" — show a faint hint when the model flagged data limitations.
 export function hasEstimate(dataLimitations?: string[] | null): boolean {
   return Array.isArray(dataLimitations) && dataLimitations.length > 0;
@@ -74,6 +132,62 @@ export function hasEstimate(dataLimitations?: string[] | null): boolean {
 export function aiModeLabel(provider: AiProvider, model?: string | null): string | null {
   if (provider !== 'PROGRAM_RULE') return null;
   return model === 'mock' ? '示範資料' : '暫時無法使用';
+}
+
+// ----- AI quota (Phase 3 §1) -----
+
+// True for HTTP 429 AI_QUOTA_EXCEEDED from any AI endpoint.
+export function isQuotaError(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 429 && error.code === 'AI_QUOTA_EXCEEDED';
+}
+
+// Reads the structured quota block off a 429 error's details. Never trust the
+// hardcoded limits — always read limit/used/resetAt from here.
+export function quotaDetails(error: unknown): AiQuotaDetails | null {
+  if (!isQuotaError(error)) return null;
+  const d = error.details;
+  if (!d || typeof d !== 'object') return null;
+  const rec = d as Record<string, unknown>;
+  const quotaKey = rec.quotaKey;
+  const limit = rec.limit;
+  const used = rec.used;
+  const resetAt = rec.resetAt;
+  if (typeof quotaKey !== 'string' || typeof resetAt !== 'string') return null;
+  return {
+    quotaKey: quotaKey as AiQuotaKey,
+    limit: typeof limit === 'number' ? limit : 0,
+    used: typeof used === 'number' ? used : 0,
+    resetAt,
+  };
+}
+
+// "約 N 分鐘/小時/天後恢復" derived from resetAt. Empty when past/invalid.
+export function quotaResetHint(resetAt?: string | null): string {
+  if (!resetAt) return '';
+  const reset = new Date(resetAt).getTime();
+  if (Number.isNaN(reset)) return '';
+  const diffMs = reset - Date.now();
+  if (diffMs <= 0) return '額度應已恢復，請重新整理後再試。';
+  const minutes = Math.max(1, Math.round(diffMs / 60_000));
+  if (minutes < 60) return `約 ${minutes} 分鐘後恢復`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `約 ${hours} 小時後恢復`;
+  const days = Math.round(hours / 24);
+  return `約 ${days} 天後恢復`;
+}
+
+// Single place every AI surface turns an error into user-facing copy. Quota 429
+// keeps the backend's (already-Chinese) message; other cases fall back per code.
+export function aiErrorMessage(error: unknown, fallback: string = COPY.genericError): string {
+  if (isQuotaError(error)) {
+    return error.message || '今日 AI 額度已用完，請稍後再試。';
+  }
+  if (error instanceof ApiError) {
+    if (error.isForbidden) return COPY.forbidden;
+    if (error.code === 'NETWORK_ERROR') return COPY.genericError;
+    return error.message || fallback;
+  }
+  return fallback;
 }
 
 // Parse a JSON blob that some backends store inside AiReport.content. Returns null
