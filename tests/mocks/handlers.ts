@@ -68,13 +68,18 @@ export const handlers = [
     }),
   ),
 
-  // POST /ai/chat → ChatAnswerDto. Echoes the question so tests can assert on it.
+  // POST /ai/chat → ChatAnswerDto. Echoes the question so tests can assert on it,
+  // and encodes the received history length into `model` for multi-turn tests.
   http.post(`${API}/ai/chat`, async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as { question?: string };
+    const body = (await request.json().catch(() => ({}))) as {
+      question?: string;
+      history?: unknown[];
+    };
+    const historyLength = Array.isArray(body.history) ? body.history.length : 0;
     return ok({
       answer: `模擬回答：${body.question ?? ''}`,
       provider: 'NVIDIA',
-      model: 'mock-model',
+      model: `mock-model:history=${historyLength}`,
       sourceUpdatedAt: '2026-06-01T00:00:00.000Z',
     });
   }),

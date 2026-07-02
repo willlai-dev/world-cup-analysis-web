@@ -1,18 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useGeneralChat } from '@/features/ai/use-chat';
 import { AiSourceMeta } from '@/components/ai/AiSourceMeta';
 import { Button } from '@/components/ui/Button';
 import { ApiError } from '@/lib/api-client';
 import { CHAT_EXAMPLES, CHAT_QUESTION_MAX, COPY } from '@/lib/constants';
-import type { ChatAnswer } from '@/types/api';
-
-export type ChatTurn = { id: string; question: string; answer: ChatAnswer };
-
-// Keep only the most recent N turns (backend is single-turn/stateless; the thread
-// is a client-only convenience). Confirmed UX: show the latest 3.
-export const MAX_CHAT_TURNS = 3;
+import { useChatStore } from '@/features/ai/chat-store';
 
 function chatErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -23,36 +16,34 @@ function chatErrorMessage(error: unknown): string {
   return COPY.chatError;
 }
 
-export function GeneralFloatingChat({
-  turns,
-  onTurnsChange,
-}: {
-  turns: ChatTurn[];
-  onTurnsChange: (next: ChatTurn[]) => void;
-}) {
+// View only. The thread (turns + in-flight request) lives in a module-level store,
+// so it survives this component unmounting — whether the modal closes, the user
+// navigates away, or FloatingChatButton briefly unmounts during an auth re-check.
+export function GeneralFloatingChat() {
   const [input, setInput] = useState('');
-  const chat = useGeneralChat();
+  const turns = useChatStore((s) => s.turns);
+  const isPending = useChatStore((s) => s.isPending);
+  const isError = useChatStore((s) => s.isError);
+  const error = useChatStore((s) => s.error);
+  const send = useChatStore((s) => s.send);
 
   const trimmed = input.trim();
-  const canSend = trimmed.length > 0 && trimmed.length <= CHAT_QUESTION_MAX && !chat.isPending;
+  const canSend = trimmed.length > 0 && trimmed.length <= CHAT_QUESTION_MAX && !isPending;
 
   function submit(question: string) {
     const q = question.trim();
-    if (q.length === 0 || q.length > CHAT_QUESTION_MAX || chat.isPending) return;
-    chat.mutate(q, {
-      onSuccess: (answer) => {
-        const turn: ChatTurn = { id: `${Date.now()}`, question: q, answer };
-        onTurnsChange([...turns, turn].slice(-MAX_CHAT_TURNS));
-        setInput('');
-      },
-    });
+    if (q.length === 0 || q.length > CHAT_QUESTION_MAX || isPending) return;
+    // Clear immediately: the request lives in the store, so the input box is safe
+    // to reset even if the user closes the modal before the reply lands.
+    send(q);
+    setInput('');
   }
 
   return (
     <div className="flex flex-col gap-3" data-testid="general-chat">
       {/* Conversation thread (latest 3) */}
       <div className="flex max-h-80 flex-col gap-3 overflow-y-auto">
-        {turns.length === 0 && !chat.isPending ? (
+        {turns.length === 0 && !isPending ? (
           <p className="py-6 text-center text-sm text-slate-400">{COPY.chatEmpty}</p>
         ) : (
           turns.map((turn) => (
@@ -75,14 +66,14 @@ export function GeneralFloatingChat({
           ))
         )}
 
-        {chat.isPending && (
+        {isPending && (
           <p className="self-start text-sm text-slate-400" role="status">
             AI 回答產生中…
           </p>
         )}
       </div>
 
-      {chat.isError && <p className="text-sm text-red-600">{chatErrorMessage(chat.error)}</p>}
+      {isError && <p className="text-sm text-red-600">{chatErrorMessage(error)}</p>}
 
       {/* Composer */}
       <form
@@ -107,7 +98,7 @@ export function GeneralFloatingChat({
           aria-label="輸入問題"
           className="flex-1 resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
-        <Button type="submit" size="sm" isLoading={chat.isPending} disabled={!canSend}>
+        <Button type="submit" size="sm" isLoading={isPending} disabled={!canSend}>
           送出
         </Button>
       </form>

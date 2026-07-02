@@ -298,6 +298,15 @@ export type ChatAnswer = {
   sourceUpdatedAt?: string | null;
 };
 
+// One prior message in a multi-turn general-chat thread. Old→new order, roles
+// limited to user/assistant. The backend is stateless: the client owns the
+// thread and replays recent turns as `history` on each request.
+export type ChatRole = 'user' | 'assistant';
+export type ChatMessage = {
+  role: ChatRole;
+  content: string;
+};
+
 // ----- Composite responses -----
 
 export type HomeHighlightsResponse = {
