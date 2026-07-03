@@ -180,6 +180,10 @@ export default function AdminJobsPage() {
   // given it a couple of idle polls (handles the fast all-skipped case).
   const sawActiveRef = useRef(false);
   const idlePollsRef = useRef(0);
+  // jobRunIds already present when tracking started. A run in this set predates
+  // the current batch, so BatchProgress must not mistake it for a finished job of
+  // this run (see runForType) — it would show stale DONE/metadata. 
+  const baselineRunIdsRef = useRef<Set<string>>(new Set());
 
   const runsQuery = useJobRuns(RUNS_PARAMS, tracking ? POLL_MS : false);
   const runMutation = useRunPipeline();
@@ -211,10 +215,25 @@ export default function AdminJobsPage() {
   const startTracking = (b: Batch) => {
     sawActiveRef.current = false;
     idlePollsRef.current = 0;
+    baselineRunIdsRef.current = new Set(runs.map((r) => r.jobRunId));
     setBatch(b);
     setTracking(true);
     void runsQuery.refetch();
   };
+
+  // Adopt a pipeline that was already running when we arrived (e.g. started by
+  // cron or another admin). Otherwise `busy` would keep the buttons disabled with
+  // nothing polling for completion; picking up tracking makes progress update and
+  // re-enables the buttons once it finishes.
+  useEffect(() => {
+    if (tracking || runMutation.isPending) return;
+    if (runsQuery.data?.some(isActive)) {
+      setNotice({ tone: 'info', text: '偵測到進行中的更新流程，正在追蹤其進度。' });
+      startTracking({ label: '進行中的流程', jobTypes: [] });
+    }
+    // One-shot adoption: the tracking guard above stops it re-firing on each poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracking, runMutation.isPending, runsQuery.data]);
 
   const trigger = (preset: PipelinePreset) => {
     setNotice(null);
@@ -241,7 +260,11 @@ export default function AdminJobsPage() {
     );
   };
 
-  const busy = tracking || runMutation.isPending;
+  // Disable triggers while *any* pipeline is active — including one already
+  // running when we arrived (the backend runs a single pipeline at a time). The
+  // adoption effect above turns that active state into live tracking.
+  const anyRunActive = runs.some(isActive);
+  const busy = tracking || runMutation.isPending || anyRunActive;
 
   return (
     <div className="flex flex-col gap-6">
@@ -302,7 +325,12 @@ export default function AdminJobsPage() {
 
       {/* This-batch progress: only when we know the ordered job list (from a 202). */}
       {batch && batch.jobTypes.length > 0 && (
-        <BatchProgress batch={batch} byType={byType} tracking={tracking} />
+        <BatchProgress
+          batch={batch}
+          byType={byType}
+          tracking={tracking}
+          baselineRunIds={baselineRunIdsRef.current}
+        />
       )}
 
       {/* Recent runs — always shown; the source of truth for what actually ran. */}
@@ -365,13 +393,23 @@ function BatchProgress({
   batch,
   byType,
   tracking,
+  baselineRunIds,
 }: {
   batch: Batch;
   byType: Map<JobType, JobRun>;
   tracking: boolean;
+  baselineRunIds: Set<string>;
 }) {
+  // Only surface a run once a *new* JobRun row exists for this batch. A run whose
+  // id was already present when tracking started belongs to a previous pipeline;
+  // showing it would report stale DONE/metadata for a job this run hasn't started.
+  const runForType = (type: JobType): JobRun | undefined => {
+    const run = byType.get(type);
+    return run && !baselineRunIds.has(run.jobRunId) ? run : undefined;
+  };
+
   const done = batch.jobTypes.filter((t) => {
-    const s = byType.get(t)?.status;
+    const s = runForType(t)?.status;
     return s === 'DONE' || s === 'FAILED';
   }).length;
 
@@ -397,7 +435,7 @@ function BatchProgress({
             </THead>
             <TBody>
               {batch.jobTypes.map((type, i) => {
-                const run = byType.get(type);
+                const run = runForType(type);
                 return (
                   <TR key={`${type}-${i}`}>
                     <TD className="text-center text-slate-400">{i + 1}</TD>

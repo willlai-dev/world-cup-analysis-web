@@ -120,6 +120,54 @@ describe('AdminJobsPage', () => {
     );
   });
 
+  it('shows batch jobs as queued, not stale DONE from a previous run', async () => {
+    setAuthRole('ADMIN');
+    // recentRuns already has DONE rows for SYNC_TEAMS and GENERATE_TEAM_RATINGS.
+    // A freshly-triggered FULL batch must not borrow those as its own progress.
+    server.use(
+      http.get(`${API}/admin/jobs/runs`, () => ok(recentRuns)),
+      http.post(`${API}/admin/jobs/run`, () =>
+        accepted('manual-full', ['SYNC_TEAMS', 'SYNC_PLAYERS', 'GENERATE_TEAM_RATINGS']),
+      ),
+    );
+
+    renderWithProviders(<AdminJobsPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: '啟動全量更新' }));
+
+    await waitFor(() => expect(screen.getByText(/本次更新進度/)).toBeInTheDocument());
+    // All three rows queue: none inherits the previous run's DONE badge/metadata.
+    // "排隊中" appears only in the batch table, never in the recent-runs table.
+    expect(screen.getAllByText('排隊中')).toHaveLength(3);
+  });
+
+  it('adopts a pipeline already running on load: disables triggers and tracks it', async () => {
+    setAuthRole('ADMIN');
+    const running: JobRun[] = [
+      {
+        jobRunId: 'live1',
+        jobType: 'SYNC_TEAMS',
+        status: 'RUNNING',
+        startedAt: '2026-07-03T05:00:00.000Z',
+        completedAt: null,
+        metadata: {},
+      },
+    ];
+    server.use(http.get(`${API}/admin/jobs/runs`, () => ok(running)));
+
+    renderWithProviders(<AdminJobsPage />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('偵測到進行中的更新流程，正在追蹤其進度。'),
+      ).toBeInTheDocument(),
+    );
+    // Every trigger reads as busy and is disabled while the adopted run is active.
+    const triggers = screen.getAllByRole('button', { name: '流程進行中…' });
+    expect(triggers.length).toBeGreaterThan(0);
+    triggers.forEach((btn) => expect(btn).toBeDisabled());
+  });
+
   it('surfaces a permission notice when the runs endpoint 403s', async () => {
     setAuthRole('ADMIN');
     // Default handler already 403s the runs endpoint.
