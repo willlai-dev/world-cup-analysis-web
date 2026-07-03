@@ -1,13 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useJobRuns, useRunPipeline } from '@/features/admin/use-jobs';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useJobRuns,
+  useJobTeams,
+  useRunPipeline,
+  useRunTeamPipeline,
+} from '@/features/admin/use-jobs';
 import { ApiError } from '@/lib/api-client';
 import { COPY } from '@/lib/constants';
-import { formatDateTime } from '@/lib/formatters';
+import { formatDateTime, teamName } from '@/lib/formatters';
 import type { JobRun, JobStatus, JobType, PipelinePreset } from '@/types/api';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table';
@@ -120,8 +127,32 @@ function jobTypeLabel(type: JobType): string {
   return JOB_TYPE_LABELS[type] ?? type;
 }
 
+// A PENDING/RUNNING row older than this never terminated — the backend almost
+// certainly crashed mid-job. We stop treating such a zombie as a live pipeline so
+// one orphaned row can't lock the console (or make it poll) forever. Comfortably
+// above the slowest real job (~1–2h) and below the ~8h cron spacing.
+const ACTIVE_RUN_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
 function isActive(run: JobRun): boolean {
   return run.status === 'PENDING' || run.status === 'RUNNING';
+}
+
+function runAgeMs(run: JobRun, now: number): number {
+  const started = run.startedAt ? Date.parse(run.startedAt) : NaN;
+  // No / invalid start time (freshly queued) → age 0, i.e. treat as live.
+  return Number.isNaN(started) ? 0 : now - started;
+}
+
+// "Live" = genuinely running right now (active + started recently). Drives the
+// trigger lock, adoption, and stop-polling — all of which must ignore zombies.
+function isLiveRun(run: JobRun, now: number = Date.now()): boolean {
+  return isActive(run) && runAgeMs(run, now) < ACTIVE_RUN_MAX_AGE_MS;
+}
+
+// Active on paper but too old to be real — rendered as 逾時 so the table never
+// claims a day-old orphan is still 執行中.
+function isStaleActive(run: JobRun, now: number = Date.now()): boolean {
+  return isActive(run) && runAgeMs(run, now) >= ACTIVE_RUN_MAX_AGE_MS;
 }
 
 // Newest-first list → most-recent run per job type.
@@ -174,6 +205,9 @@ export default function AdminJobsPage() {
   const [notice, setNotice] = useState<{ tone: 'info' | 'error' | 'success'; text: string } | null>(
     null,
   );
+  // Single-country re-analysis inputs (docs §2.1).
+  const [teamId, setTeamId] = useState('');
+  const [teamSync, setTeamSync] = useState(true);
 
   // Guards against the race where the runs list has not yet reflected a just-
   // triggered pipeline: don't declare "done" until we've either seen activity or
@@ -187,6 +221,21 @@ export default function AdminJobsPage() {
 
   const runsQuery = useJobRuns(RUNS_PARAMS, tracking ? POLL_MS : false);
   const runMutation = useRunPipeline();
+  const runTeamMutation = useRunTeamPipeline();
+
+  // Country picker for the single-team re-analysis. Sourced from the admin-only
+  // /admin/jobs/teams (since /teams is USER/PREMIUM-only). If that errors — e.g.
+  // an older backend without the route — we fall back to entering the id by hand
+  // (teamsQuery.isError) rather than showing an empty dropdown.
+  const teamsQuery = useJobTeams();
+  const teamOptions = useMemo(
+    () =>
+      (teamsQuery.data ?? []).map((t) => ({
+        value: t.id,
+        label: t.fifaCode ? `${teamName(t)}（${t.fifaCode}）` : teamName(t),
+      })),
+    [teamsQuery.data],
+  );
 
   const runs = runsQuery.data ?? [];
   const byType = latestByType(runs);
@@ -197,7 +246,7 @@ export default function AdminJobsPage() {
     if (!tracking) return;
     const data = runsQuery.data;
     if (!data) return;
-    const anyActive = data.some(isActive);
+    const anyActive = data.some((r) => isLiveRun(r));
     if (anyActive) {
       sawActiveRef.current = true;
       idlePollsRef.current = 0;
@@ -227,13 +276,27 @@ export default function AdminJobsPage() {
   // re-enables the buttons once it finishes.
   useEffect(() => {
     if (tracking || runMutation.isPending) return;
-    if (runsQuery.data?.some(isActive)) {
+    if (runsQuery.data?.some((r) => isLiveRun(r))) {
       setNotice({ tone: 'info', text: '偵測到進行中的更新流程，正在追蹤其進度。' });
       startTracking({ label: '進行中的流程', jobTypes: [] });
     }
     // One-shot adoption: the tracking guard above stops it re-firing on each poll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracking, runMutation.isPending, runsQuery.data]);
+
+  // Shared failure path for both triggers: a 409 means something is already
+  // running (not queued) → adopt its progress; anything else is a plain error.
+  // Returns true if it consumed the error (so callers can special-case first).
+  const handleRunError = (err: unknown): boolean => {
+    if (err instanceof ApiError && err.code === 'PIPELINE_RUNNING') {
+      setNotice({ tone: 'info', text: '已有更新流程進行中，改為追蹤其進度。' });
+      startTracking({ label: '進行中的流程', jobTypes: [] });
+      return true;
+    }
+    const text = err instanceof ApiError ? err.message : COPY.genericError;
+    setNotice({ tone: 'error', text });
+    return true;
+  };
 
   const trigger = (preset: PipelinePreset) => {
     setNotice(null);
@@ -247,14 +310,31 @@ export default function AdminJobsPage() {
           });
           startTracking({ label: res.label, jobTypes: res.jobTypes });
         },
+        onError: handleRunError,
+      },
+    );
+  };
+
+  const triggerTeam = () => {
+    const id = teamId.trim();
+    if (!id) return;
+    setNotice(null);
+    runTeamMutation.mutate(
+      { teamId: id, sync: teamSync },
+      {
+        onSuccess: (res) => {
+          setNotice({
+            tone: 'info',
+            text: `已啟動單獨分析：${res.teamName}（共 ${res.jobTypes.length} 個工作），開始輪詢進度。`,
+          });
+          startTracking({ label: `單獨分析：${res.teamName}`, jobTypes: res.jobTypes });
+        },
         onError: (err) => {
-          if (err instanceof ApiError && err.code === 'PIPELINE_RUNNING') {
-            setNotice({ tone: 'info', text: '已有更新流程進行中，改為追蹤其進度。' });
-            startTracking({ label: '進行中的流程', jobTypes: [] });
+          if (err instanceof ApiError && err.code === 'NOT_FOUND') {
+            setNotice({ tone: 'error', text: `找不到球隊 ID「${id}」，請確認後再試。` });
             return;
           }
-          const text = err instanceof ApiError ? err.message : COPY.genericError;
-          setNotice({ tone: 'error', text });
+          handleRunError(err);
         },
       },
     );
@@ -262,9 +342,11 @@ export default function AdminJobsPage() {
 
   // Disable triggers while *any* pipeline is active — including one already
   // running when we arrived (the backend runs a single pipeline at a time). The
-  // adoption effect above turns that active state into live tracking.
-  const anyRunActive = runs.some(isActive);
-  const busy = tracking || runMutation.isPending || anyRunActive;
+  // adoption effect above turns that active state into live tracking. Note: this
+  // deliberately does NOT depend on the runs list loading — a slow or failing
+  // history fetch must not lock the triggers or read as "pipeline running".
+  const anyRunLive = runs.some((r) => isLiveRun(r));
+  const busy = tracking || runMutation.isPending || runTeamMutation.isPending || anyRunLive;
 
   return (
     <div className="flex flex-col gap-6">
@@ -299,26 +381,93 @@ export default function AdminJobsPage() {
         </div>
       </section>
 
-      {/* Per-domain triggers. Backend runs one pipeline at a time, so any active
-          run disables all of these too. */}
+      {/* Per-domain triggers — one grouped list instead of a card per button.
+          Backend runs one pipeline at a time, so any active run disables every row. */}
       <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold text-slate-700">分領域更新</h2>
-          <p className="text-xs text-slate-400">
+        <h2 className="text-sm font-semibold text-slate-700">分領域更新</h2>
+        <Card className="overflow-hidden">
+          <p className="border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-xs text-slate-500">
             建議順序：球員 → 國家／球隊 → 冠軍預測（評分互相參考）；新聞、賽事可隨時單獨跑。
           </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {DOMAIN_PRESETS.map((p) => (
-            <PresetCard
-              key={p.preset}
-              def={p}
-              busy={busy}
-              pending={runMutation.isPending && runMutation.variables?.pipeline === p.preset}
-              onRun={() => trigger(p.preset)}
-            />
-          ))}
-        </div>
+          <ul className="divide-y divide-slate-100">
+            {DOMAIN_PRESETS.map((p) => (
+              <DomainRow
+                key={p.preset}
+                def={p}
+                busy={busy}
+                pending={runMutation.isPending && runMutation.variables?.pipeline === p.preset}
+                onRun={() => trigger(p.preset)}
+              />
+            ))}
+          </ul>
+        </Card>
+      </section>
+
+      {/* Single-country re-analysis (docs §2.1). Pick the country from the list;
+          the 202 echoes teamName as confirmation. `/teams` is USER/PREMIUM-only,
+          so on a 403 we fall back to entering the id by hand. */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-slate-700">單獨分析一個國家</h2>
+        <Card>
+          <CardBody className="flex flex-col gap-4">
+            <p className="text-sm text-slate-500">
+              只重算單一國家與其球員（球員評分 → 球隊評分 → 球員近況），比「國家／球隊」更省時。
+              從清單選擇要重新分析的國家。
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              {teamsQuery.isError ? (
+                <Input
+                  label="球隊 ID"
+                  placeholder="seed-team-BRA"
+                  className="sm:w-72"
+                  value={teamId}
+                  disabled={busy}
+                  onChange={(e) => setTeamId(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') triggerTeam();
+                  }}
+                />
+              ) : (
+                <Select
+                  label="國家／球隊"
+                  className="sm:w-72"
+                  placeholder={teamsQuery.isLoading ? '載入球隊清單…' : '選擇球隊…'}
+                  options={teamOptions}
+                  value={teamId}
+                  disabled={busy || teamsQuery.isLoading}
+                  onChange={(e) => setTeamId(e.target.value)}
+                />
+              )}
+              <label className="flex h-10 items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300"
+                  checked={teamSync}
+                  disabled={busy}
+                  onChange={(e) => setTeamSync(e.target.checked)}
+                />
+                先抓最新名單
+              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy || !teamId.trim()}
+                isLoading={runTeamMutation.isPending}
+                onClick={triggerTeam}
+              >
+                {busy && !runTeamMutation.isPending ? '流程進行中…' : '重新分析這一隊'}
+              </Button>
+            </div>
+            {teamsQuery.isError && (
+              <p className="text-xs text-amber-600">
+                無法載入球隊清單，請直接輸入球隊 ID（例如 seed-team-BRA）。
+              </p>
+            )}
+            <p className="text-xs text-slate-400">
+              未勾「先抓最新名單」則只用現有資料重算，不呼叫外部來源、更快也不受流量限制。
+            </p>
+          </CardBody>
+        </Card>
       </section>
 
       {notice && <NoticeBanner tone={notice.tone} text={notice.text} polling={tracking} />}
@@ -389,6 +538,39 @@ function PresetCard({
   );
 }
 
+// Compact row for a per-domain preset: title + flow on the left, trigger on the
+// right. Grouped in a single card so the five domains read as one list.
+function DomainRow({
+  def,
+  busy,
+  pending,
+  onRun,
+}: {
+  def: PresetDef;
+  busy: boolean;
+  pending: boolean;
+  onRun: () => void;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-50">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-slate-900">{def.title}</p>
+        <p className="mt-0.5 text-xs text-slate-500">{def.desc}</p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="min-w-32 shrink-0"
+        disabled={busy}
+        isLoading={pending}
+        onClick={onRun}
+      >
+        {busy && !pending ? '流程進行中…' : def.cta}
+      </Button>
+    </li>
+  );
+}
+
 function BatchProgress({
   batch,
   byType,
@@ -442,7 +624,7 @@ function BatchProgress({
                     <TD className="font-medium text-slate-900">{jobTypeLabel(type)}</TD>
                     <TD>
                       {run ? (
-                        <StatusBadge status={run.status} />
+                        <StatusBadge run={run} />
                       ) : (
                         <Badge tone="neutral">排隊中</Badge>
                       )}
@@ -482,7 +664,7 @@ function RunsTable({ runs }: { runs: JobRun[] }) {
             <TR key={run.jobRunId}>
               <TD className="font-medium text-slate-900">{jobTypeLabel(run.jobType)}</TD>
               <TD>
-                <StatusBadge status={run.status} />
+                <StatusBadge run={run} />
               </TD>
               <TD className="text-slate-600">{summarizeMetadata(run.metadata)}</TD>
               <TD className="whitespace-nowrap text-slate-500">{formatDateTime(run.startedAt)}</TD>
@@ -495,8 +677,10 @@ function RunsTable({ runs }: { runs: JobRun[] }) {
   );
 }
 
-function StatusBadge({ status }: { status: JobStatus }) {
-  const meta = STATUS_META[status];
+function StatusBadge({ run }: { run: JobRun }) {
+  const meta = isStaleActive(run)
+    ? ({ label: '逾時', tone: 'warning' } as const)
+    : STATUS_META[run.status];
   return <Badge tone={meta.tone}>{meta.label}</Badge>;
 }
 

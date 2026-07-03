@@ -6,7 +6,7 @@ import AdminJobsPage from '@/app/(admin)/admin/jobs/page';
 import { server } from '@/tests/mocks/server';
 import { API, ok } from '@/tests/mocks/handlers';
 import { renderWithProviders, setAuthRole } from '@/tests/utils';
-import type { JobRun } from '@/types/api';
+import type { JobRun, JobType } from '@/types/api';
 
 const recentRuns: JobRun[] = [
   {
@@ -27,12 +27,25 @@ const recentRuns: JobRun[] = [
   },
 ];
 
-function accepted(label: string, jobTypes: string[]) {
+function accepted(label: string, jobTypes: JobType[]) {
   return HttpResponse.json(
     { data: { started: true, label, jobTypes }, error: null },
     { status: 202 },
   );
 }
+
+function acceptedTeam(teamId: string, teamName: string, jobTypes: JobType[]) {
+  return HttpResponse.json(
+    { data: { started: true, teamId, teamName, jobTypes }, error: null },
+    { status: 202 },
+  );
+}
+
+// Options served by GET /admin/jobs/teams (the admin-readable picker source).
+const teamOptions = [
+  { id: 'team-fra', nameEn: 'France', nameZh: '法國', fifaCode: 'FRA' },
+  { id: 'team-arg', nameEn: 'Argentina', nameZh: '阿根廷', fifaCode: 'ARG' },
+];
 
 describe('AdminJobsPage', () => {
   it('renders the three preset triggers and the recent-runs table', async () => {
@@ -148,7 +161,8 @@ describe('AdminJobsPage', () => {
         jobRunId: 'live1',
         jobType: 'SYNC_TEAMS',
         status: 'RUNNING',
-        startedAt: '2026-07-03T05:00:00.000Z',
+        // Must be genuinely recent so it counts as live, not a stale zombie.
+        startedAt: new Date().toISOString(),
         completedAt: null,
         metadata: {},
       },
@@ -166,6 +180,154 @@ describe('AdminJobsPage', () => {
     const triggers = screen.getAllByRole('button', { name: '流程進行中…' });
     expect(triggers.length).toBeGreaterThan(0);
     triggers.forEach((btn) => expect(btn).toBeDisabled());
+  });
+
+  it('ignores a stale (zombie) RUNNING run: triggers stay usable, shown as 逾時', async () => {
+    setAuthRole('ADMIN');
+    // A GENERATE_NEWS_SUMMARY orphaned in RUNNING days ago (backend crashed mid-job).
+    // It must not lock the console the way a live pipeline would.
+    const zombie: JobRun[] = [
+      {
+        jobRunId: 'zombie1',
+        jobType: 'GENERATE_NEWS_SUMMARY',
+        status: 'RUNNING',
+        startedAt: '2026-07-01T20:06:11.000Z',
+        completedAt: null,
+        metadata: {},
+      },
+    ];
+    server.use(http.get(`${API}/admin/jobs/runs`, () => ok(zombie)));
+
+    renderWithProviders(<AdminJobsPage />);
+
+    // Trigger stays enabled — a day-old orphan can't brick the page.
+    expect(await screen.findByRole('button', { name: '啟動全量更新' })).toBeEnabled();
+    // …and no adoption/tracking kicks in for a dead run.
+    expect(
+      screen.queryByText('偵測到進行中的更新流程，正在追蹤其進度。'),
+    ).not.toBeInTheDocument();
+    // Surfaced honestly as 逾時, never 執行中.
+    expect(await screen.findByText('逾時')).toBeInTheDocument();
+    expect(screen.queryByText('執行中')).not.toBeInTheDocument();
+  });
+
+  it('re-analyzes a single country picked from the team dropdown', async () => {
+    setAuthRole('ADMIN');
+    let calledTeamId: string | undefined;
+    let sentBody: { sync?: boolean } | undefined;
+    server.use(
+      http.get(`${API}/admin/jobs/runs`, () => ok(recentRuns)),
+      http.get(`${API}/admin/jobs/teams`, () => ok(teamOptions)),
+      http.post(`${API}/admin/jobs/run-team/:teamId`, async ({ params, request }) => {
+        calledTeamId = params.teamId as string;
+        sentBody = (await request.json().catch(() => ({}))) as { sync?: boolean };
+        return acceptedTeam('team-arg', '阿根廷', [
+          'GENERATE_PLAYER_RATINGS',
+          'GENERATE_TEAM_RATINGS',
+          'GENERATE_PLAYER_STATUS',
+        ]);
+      }),
+    );
+
+    renderWithProviders(<AdminJobsPage />);
+
+    // Trigger is disabled until a country is chosen from the list.
+    const runBtn = await screen.findByRole('button', { name: '重新分析這一隊' });
+    expect(runBtn).toBeDisabled();
+
+    const select = await screen.findByLabelText('國家／球隊');
+    // Options come from GET /teams (default handler → France / Argentina).
+    await screen.findByRole('option', { name: /阿根廷/ });
+    await userEvent.selectOptions(select, 'team-arg');
+    await userEvent.click(screen.getByRole('button', { name: '重新分析這一隊' }));
+
+    await waitFor(() => expect(calledTeamId).toBe('team-arg'));
+    expect(sentBody).toEqual({ sync: true }); // checkbox defaults to on
+    await waitFor(() =>
+      expect(screen.getByText(/已啟動單獨分析：阿根廷/)).toBeInTheDocument(),
+    );
+    // The scoped job list renders as tracked progress. Assert on a label unique
+    // to the batch (球員近況), not one also present in the recent-runs table.
+    expect(screen.getByText(/本次更新進度（單獨分析：阿根廷）/)).toBeInTheDocument();
+    expect(screen.getByText('球員近況')).toBeInTheDocument();
+  });
+
+  it('sends sync=false when the "先抓最新名單" box is unchecked', async () => {
+    setAuthRole('ADMIN');
+    let sentBody: { sync?: boolean } | undefined;
+    server.use(
+      http.get(`${API}/admin/jobs/runs`, () => ok(recentRuns)),
+      http.get(`${API}/admin/jobs/teams`, () => ok(teamOptions)),
+      http.post(`${API}/admin/jobs/run-team/:teamId`, async ({ request }) => {
+        sentBody = (await request.json().catch(() => ({}))) as { sync?: boolean };
+        return acceptedTeam('team-arg', '阿根廷', ['GENERATE_TEAM_RATINGS']);
+      }),
+    );
+
+    renderWithProviders(<AdminJobsPage />);
+
+    const select = await screen.findByLabelText('國家／球隊');
+    await screen.findByRole('option', { name: /阿根廷/ });
+    await userEvent.selectOptions(select, 'team-arg');
+    await userEvent.click(screen.getByRole('checkbox', { name: /先抓最新名單/ }));
+    await userEvent.click(screen.getByRole('button', { name: '重新分析這一隊' }));
+
+    await waitFor(() => expect(sentBody).toEqual({ sync: false }));
+  });
+
+  it('shows a not-found notice when the team is unknown (404)', async () => {
+    setAuthRole('ADMIN');
+    server.use(
+      http.get(`${API}/admin/jobs/runs`, () => ok(recentRuns)),
+      http.get(`${API}/admin/jobs/teams`, () => ok(teamOptions)),
+      http.post(`${API}/admin/jobs/run-team/:teamId`, () =>
+        HttpResponse.json(
+          { data: null, error: { code: 'NOT_FOUND', message: 'team not found' } },
+          { status: 404 },
+        ),
+      ),
+    );
+
+    renderWithProviders(<AdminJobsPage />);
+
+    const select = await screen.findByLabelText('國家／球隊');
+    await screen.findByRole('option', { name: /法國/ });
+    await userEvent.selectOptions(select, 'team-fra');
+    await userEvent.click(screen.getByRole('button', { name: '重新分析這一隊' }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/找不到球隊 ID「team-fra」/)).toBeInTheDocument(),
+    );
+  });
+
+  it('falls back to a manual id input when the team list is unavailable', async () => {
+    setAuthRole('ADMIN');
+    // Simulate an older backend without /admin/jobs/teams (or any load failure).
+    server.use(
+      http.get(`${API}/admin/jobs/runs`, () => ok(recentRuns)),
+      http.get(`${API}/admin/jobs/teams`, () =>
+        HttpResponse.json(
+          { data: null, error: { code: 'NOT_FOUND', message: 'not found' } },
+          { status: 404 },
+        ),
+      ),
+      http.post(`${API}/admin/jobs/run-team/:teamId`, () =>
+        acceptedTeam('seed-team-BRA', '巴西', ['GENERATE_TEAM_RATINGS']),
+      ),
+    );
+
+    renderWithProviders(<AdminJobsPage />);
+
+    // No dropdown — a manual id field replaces it when the list can't load.
+    const input = await screen.findByLabelText('球隊 ID');
+    expect(screen.queryByLabelText('國家／球隊')).not.toBeInTheDocument();
+
+    await userEvent.type(input, 'seed-team-BRA');
+    await userEvent.click(screen.getByRole('button', { name: '重新分析這一隊' }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/已啟動單獨分析：巴西/)).toBeInTheDocument(),
+    );
   });
 
   it('surfaces a permission notice when the runs endpoint 403s', async () => {

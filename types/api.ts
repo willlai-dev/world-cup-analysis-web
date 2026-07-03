@@ -537,3 +537,30 @@ export type JobRunsQuery = {
   limit?: number; // 1–200, default 50
   jobType?: JobType;
 };
+
+// POST /admin/jobs/run-team/:teamId — re-analyze a single country/team (docs §2.1).
+// Finer-grained than the TEAMS preset (which touches all teams).
+export type RunTeamRequest = {
+  // Backend default is true (sync the squad from football-data first). false =
+  // recompute from existing data only — faster, no external call / rate limit.
+  sync?: boolean;
+};
+
+// 202 payload for run-team: same idea as RunPipelineResponse plus the resolved
+// team identity (so the UI can confirm which country it matched).
+export type RunTeamResponse = {
+  started: boolean;
+  teamId: string;
+  teamName: string;
+  jobTypes: JobType[];
+};
+
+// GET /admin/jobs/teams — ADMIN-readable team list for the run-team picker.
+// `/api/teams` is USER/PREMIUM-only (admins 403 there), so the picker sources
+// its options from this admin-guarded lookup instead.
+export type AdminTeamOption = {
+  id: string;
+  nameEn: string;
+  nameZh: string | null;
+  fifaCode: string | null;
+};
