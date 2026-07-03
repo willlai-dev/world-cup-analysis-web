@@ -30,10 +30,10 @@ export default function TeamDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <Card>
-        <CardBody className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <CardBody className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
             <TeamFlag team={t} size={56} />
-            <div>
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold text-slate-900">{teamName(t)}</h1>
               <p className="text-sm text-slate-500">
                 {t.continent ?? '—'}
@@ -42,8 +42,8 @@ export default function TeamDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge tone={t.isEliminated ? 'neutral' : 'success'}>
                 {eliminationLabel(t.isEliminated)}
               </Badge>

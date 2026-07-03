@@ -40,8 +40,8 @@ export default function PlayerDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <Card>
-        <CardBody className="flex items-center justify-between gap-4">
-          <div>
+        <CardBody className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-slate-900">{playerName(p)}</h1>
             <p className="text-sm text-slate-500">
               {p.team ? teamName(p.team) : '—'} · {positionLabel(p.position)}
@@ -49,8 +49,8 @@ export default function PlayerDetailPage() {
               {p.shirtNumber != null ? ` · #${p.shirtNumber}` : ''}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               {p.overallScore != null && (
                 <span className="text-sm text-slate-500">
                   總分 <span className="font-semibold text-slate-900">{p.overallScore}</span>

@@ -552,7 +552,7 @@ function DomainRow({
   onRun: () => void;
 }) {
   return (
-    <li className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-50">
+    <li className="flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <p className="text-sm font-medium text-slate-900">{def.title}</p>
         <p className="mt-0.5 text-xs text-slate-500">{def.desc}</p>
@@ -560,7 +560,7 @@ function DomainRow({
       <Button
         variant="outline"
         size="sm"
-        className="min-w-32 shrink-0"
+        className="min-w-32 self-start sm:shrink-0 sm:self-auto"
         disabled={busy}
         isLoading={pending}
         onClick={onRun}
@@ -597,7 +597,7 @@ function BatchProgress({
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between gap-3">
+      <CardHeader className="flex flex-wrap items-center justify-between gap-3">
         <CardTitle>本次更新進度（{batch.label}）</CardTitle>
         <span className="text-sm tabular-nums text-slate-500">
           {done}/{batch.jobTypes.length} 完成{tracking && <PollingDot className="ml-2 inline-flex" />}

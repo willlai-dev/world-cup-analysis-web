@@ -19,7 +19,7 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <section className="mb-10 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 px-8 py-12 text-white">
+      <section className="mb-10 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 px-6 py-10 text-white sm:px-8 sm:py-12">
         <h1 className="text-3xl font-bold sm:text-4xl">AI World Cup Analyst</h1>
         <p className="mt-3 max-w-2xl text-brand-50">
           以 AI 分析為核心的世足網站：賽前分析、賽後回顧、國家隊評級、球員六邊能力、冠軍預測與英文新聞摘要。
@@ -29,8 +29,13 @@ export default function HomePage() {
             <Link href={routes.login}>
               <Button variant="secondary">登入</Button>
             </Link>
-            <Link href={routes.register}>
-              <Button className="bg-white text-brand-700 hover:bg-brand-50">註冊</Button>
+            {/* Styled directly (not via Button): cn() doesn't merge conflicting
+                Tailwind utilities, so variant bg/text overrides are order-dependent. */}
+            <Link
+              href={routes.register}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-white px-4 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50"
+            >
+              註冊
             </Link>
           </div>
         )}
