@@ -476,3 +476,64 @@ export type AiUsageQuery = {
   to?: string; // ISO
   taskType?: string;
 };
+
+// ----- Admin manual data pipeline (docs/ADMIN_MANUAL_JOBS_FRONTEND.md) -----
+
+// The 12 individual jobs a pipeline can run, in the order presets execute them.
+export type JobType =
+  | 'SYNC_TEAMS'
+  | 'SYNC_PLAYERS'
+  | 'SYNC_FIXTURES'
+  | 'SYNC_RESULTS'
+  | 'FETCH_NEWS'
+  | 'GENERATE_NEWS_SUMMARY'
+  | 'GENERATE_NEWS_IMPACT'
+  | 'GENERATE_PLAYER_RATINGS'
+  | 'GENERATE_TEAM_RATINGS'
+  | 'GENERATE_PLAYER_STATUS'
+  | 'GENERATE_MATCH_ANALYSIS'
+  | 'GENERATE_CHAMPION_PREDICTIONS';
+
+// Preset combinations for POST /admin/jobs/run (default FULL). `jobs` overrides these.
+// FULL/SYNC/GENERATE are whole-DB presets; TEAMS/PLAYERS/MATCHES/NEWS/CHAMPION are
+// per-domain (sync + that domain's AI analysis) so a single area can be refreshed.
+export type PipelinePreset =
+  | 'FULL'
+  | 'SYNC'
+  | 'GENERATE'
+  | 'TEAMS'
+  | 'PLAYERS'
+  | 'MATCHES'
+  | 'NEWS'
+  | 'CHAMPION';
+
+// One execution record from GET /admin/jobs/runs (newest first). `metadata` shape
+// varies by job (sync/fetch vs AI-generate vs skipped vs error) — parse defensively.
+export type JobRun = {
+  jobRunId: string;
+  jobType: JobType;
+  status: JobStatus;
+  startedAt: string | null;
+  completedAt: string | null; // null while still running
+  metadata: unknown;
+};
+
+// POST /admin/jobs/run body — both optional. `jobs` (non-empty) takes precedence
+// over `pipeline`. Empty body === { pipeline: 'FULL' }.
+export type RunPipelineRequest = {
+  pipeline?: PipelinePreset;
+  jobs?: JobType[];
+};
+
+// 202 Accepted payload — `label` is manual-<preset> / manual-custom; `jobTypes`
+// is the ordered list this run will execute (align progress polling against it).
+export type RunPipelineResponse = {
+  started: boolean;
+  label: string;
+  jobTypes: JobType[];
+};
+
+export type JobRunsQuery = {
+  limit?: number; // 1–200, default 50
+  jobType?: JobType;
+};
