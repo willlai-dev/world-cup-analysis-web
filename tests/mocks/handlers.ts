@@ -102,6 +102,7 @@ export const handlers = [
   // Admin endpoints default to 403 for the default USER session.
   http.get(`${API}/admin/users`, () => fail(403, 'FORBIDDEN', '權限不足')),
   http.get(`${API}/admin/ai-usage`, () => fail(403, 'FORBIDDEN', '權限不足')),
+  http.get(`${API}/admin/jobs/runs`, () => fail(403, 'FORBIDDEN', '權限不足')),
 ];
 
 // A deterministic deep-chat answer for a given entity scope.
