@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <circle cx="16" cy="16" r="15" fill="#ffffff" stroke="#111111" stroke-width="1.5"/>
+  <g fill="#111111">
+    <!-- center pentagon -->
+    <path d="M16 9.2l4.2 3.05-1.6 4.93h-5.2l-1.6-4.93z"/>
+    <!-- top edge patches -->
+    <path d="M16 2.2l3 2.2-1.2 2.1h-3.6l-1.2-2.1z"/>
+    <!-- right patch -->
+    <path d="M27.4 12.4l1.1 3.5-2.3 1.5-2.4-1.9 1-3.4z"/>
+    <!-- left patch -->
+    <path d="M4.6 12.4l2.6-.3 1 3.4-2.4 1.9-2.3-1.5z"/>
+    <!-- bottom-right patch -->
+    <path d="M22.3 24.9l-1.6-2.9 2.2-2.2 2.9 1-.2 2.8z"/>
+    <!-- bottom-left patch -->
+    <path d="M9.7 24.9l-3.1.5-.2-2.8 2.9-1 2.2 2.2z"/>
+  </g>
+</svg>

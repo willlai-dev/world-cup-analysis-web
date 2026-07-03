@@ -10,6 +10,7 @@ import { loginSchema, type LoginFormValues } from '@/features/auth/auth-schemas'
 import { useAuthStore } from '@/features/auth/auth-store';
 import { ROLE_HOME } from '@/lib/constants';
 import { ApiError } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import type { LoginResponse } from '@/types/api';
@@ -81,7 +82,11 @@ export function LoginForm() {
             autoComplete="current-password"
             aria-invalid={errors.password ? true : undefined}
             aria-describedby={errors.password ? passwordErrorId : undefined}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 pr-12 text-sm text-slate-900 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className={cn(
+              'h-10 w-full rounded-md border bg-white px-3 pr-12 text-sm text-slate-900 shadow-sm',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+              errors.password ? 'border-red-400' : 'border-slate-300',
+            )}
             {...register('password')}
           />
           <button
