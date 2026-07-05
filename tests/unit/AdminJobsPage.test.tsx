@@ -191,7 +191,7 @@ describe('AdminJobsPage', () => {
         jobRunId: 'zombie1',
         jobType: 'GENERATE_NEWS_SUMMARY',
         status: 'RUNNING',
-        startedAt: '2026-07-01T20:06:11.000Z',
+        startedAt: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(),
         completedAt: null,
         metadata: {},
       },
