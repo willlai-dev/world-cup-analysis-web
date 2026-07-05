@@ -286,16 +286,14 @@ export default function AdminJobsPage() {
 
   // Shared failure path for both triggers: a 409 means something is already
   // running (not queued) → adopt its progress; anything else is a plain error.
-  // Returns true if it consumed the error (so callers can special-case first).
-  const handleRunError = (err: unknown): boolean => {
+  const handleRunError = (err: unknown): void => {
     if (err instanceof ApiError && err.code === 'PIPELINE_RUNNING') {
       setNotice({ tone: 'info', text: '已有更新流程進行中，改為追蹤其進度。' });
       startTracking({ label: '進行中的流程', jobTypes: [] });
-      return true;
+      return;
     }
     const text = err instanceof ApiError ? err.message : COPY.genericError;
     setNotice({ tone: 'error', text });
-    return true;
   };
 
   const trigger = (preset: PipelinePreset) => {
