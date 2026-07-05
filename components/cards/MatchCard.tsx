@@ -3,24 +3,9 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFlag } from '@/components/cards/TeamFlag';
 import { routes } from '@/lib/routes';
-import { formatDateTime, formatScore, stageLabel, teamName } from '@/lib/formatters';
-import type { MatchStatus, MatchSummary } from '@/types/api';
-
-const STATUS_LABELS: Record<MatchStatus, string> = {
-  SCHEDULED: '未開始',
-  LIVE: '進行中',
-  FINISHED: '已結束',
-  POSTPONED: '延期',
-  CANCELLED: '取消',
-};
-
-const STATUS_TONE: Record<MatchStatus, 'neutral' | 'success' | 'danger' | 'warning'> = {
-  SCHEDULED: 'neutral',
-  LIVE: 'success',
-  FINISHED: 'neutral',
-  POSTPONED: 'warning',
-  CANCELLED: 'danger',
-};
+import { MATCH_STATUS_TONES } from '@/lib/constants';
+import { formatDateTime, formatScore, matchStatusLabel, stageLabel, teamName } from '@/lib/formatters';
+import type { MatchSummary } from '@/types/api';
 
 export function MatchCard({ match }: { match: MatchSummary }) {
   return (
@@ -31,7 +16,7 @@ export function MatchCard({ match }: { match: MatchSummary }) {
             {stageLabel(match.stage)}
             {match.groupName ? ` · ${match.groupName}` : ''}
           </span>
-          <Badge tone={STATUS_TONE[match.status]}>{STATUS_LABELS[match.status]}</Badge>
+          <Badge tone={MATCH_STATUS_TONES[match.status]}>{matchStatusLabel(match.status)}</Badge>
         </div>
 
         <div className="flex items-center justify-between gap-2">

@@ -20,9 +20,9 @@ describe('AdminAiUsagePage', () => {
     expect(screen.getByText('120')).toBeInTheDocument(); // calls
     expect(screen.getByText('45,000')).toBeInTheDocument(); // inputTokens formatted
 
-    // Breakdown categories.
-    expect(screen.getByText('GENERAL_CHAT')).toBeInTheDocument();
-    expect(screen.getByText('PROGRAM_RULE')).toBeInTheDocument();
+    // Breakdown categories (labels are localized; raw codes fall back verbatim).
+    expect(screen.getByText('一般問答')).toBeInTheDocument(); // GENERAL_CHAT
+    expect(screen.getByText('規則引擎')).toBeInTheDocument(); // PROGRAM_RULE
 
     // Top users table.
     expect(screen.getByText('使用者排行（前 10）')).toBeInTheDocument();

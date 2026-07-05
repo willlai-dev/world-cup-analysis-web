@@ -89,6 +89,15 @@ export const NEWS_CATEGORIES: NewsCategory[] = [
 
 export const PLAYER_POSITIONS: PlayerPosition[] = ['GK', 'DF', 'MF', 'FW', 'UNKNOWN'];
 
+// Match status badge colour — shared by the match list cards and detail page.
+export const MATCH_STATUS_TONES: Record<MatchStatus, BadgeTone> = {
+  SCHEDULED: 'neutral',
+  LIVE: 'success',
+  FINISHED: 'neutral',
+  POSTPONED: 'warning',
+  CANCELLED: 'danger',
+};
+
 // News tag chip colour by tag type (§5).
 export const NEWS_TAG_TONES: Record<NewsTagType, BadgeTone> = {
   TEAM: 'brand',
