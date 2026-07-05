@@ -18,8 +18,16 @@ import { DeepChat } from '@/components/ai/DeepChat';
 import { ScoreBar } from '@/components/charts/ScoreBar';
 import { LoadingState, ErrorState } from '@/components/ui/states';
 import { parseMatchAnalysis, predictionScorelines, structuredSource } from '@/lib/ai';
-import { formatDateTime, formatScore, stageLabel, teamName } from '@/lib/formatters';
-import type { LikelyScoreline } from '@/types/api';
+import { MATCH_STATUS_TONES } from '@/lib/constants';
+import {
+  formatDateTime,
+  formatScore,
+  matchEventLabel,
+  matchStatusLabel,
+  stageLabel,
+  teamName,
+} from '@/lib/formatters';
+import type { LikelyScoreline, MatchEvent } from '@/types/api';
 
 export default function MatchDetailPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -50,7 +58,7 @@ export default function MatchDetailPage() {
               {stageLabel(m.stage)}
               {m.groupName ? ` · ${m.groupName}` : ''}
             </span>
-            <Badge tone="neutral">{m.status}</Badge>
+            <Badge tone={MATCH_STATUS_TONES[m.status]}>{matchStatusLabel(m.status)}</Badge>
           </div>
           <div className="flex items-center justify-between gap-2">
             <TeamSide name={teamName(m.homeTeam)} team={m.homeTeam} />
@@ -130,17 +138,31 @@ export default function MatchDetailPage() {
           </CardHeader>
           <CardBody>
             <ul className="flex flex-col gap-2 text-sm text-slate-700">
-              {m.events.map((ev) => (
-                <li key={ev.id} className="flex gap-3">
-                  <span className="w-12 text-right font-mono text-slate-400">
-                    {ev.minute != null ? `${ev.minute}${ev.extraMinute ? `+${ev.extraMinute}` : ''}'` : '—'}
-                  </span>
-                  <span>
-                    {ev.eventType}
-                    {ev.description ? ` — ${ev.description}` : ''}
-                  </span>
-                </li>
-              ))}
+              {sortEvents(m.events).map((ev) => {
+                const eventTeam =
+                  ev.teamId === m.homeTeam.id
+                    ? m.homeTeam
+                    : ev.teamId === m.awayTeam.id
+                      ? m.awayTeam
+                      : null;
+                return (
+                  <li key={ev.id} className="flex items-baseline gap-3">
+                    <span className="w-12 shrink-0 text-right font-mono text-slate-400">
+                      {ev.minute != null ? `${ev.minute}${ev.extraMinute ? `+${ev.extraMinute}` : ''}'` : '—'}
+                    </span>
+                    {eventTeam && (
+                      <span className="flex shrink-0 items-center gap-1.5 self-center">
+                        <TeamFlag team={eventTeam} size={16} />
+                        <span className="text-xs text-slate-500">{teamName(eventTeam)}</span>
+                      </span>
+                    )}
+                    <span>
+                      {matchEventLabel(ev.eventType)}
+                      {ev.description ? ` — ${ev.description}` : ''}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </CardBody>
         </Card>
@@ -156,9 +178,16 @@ export default function MatchDetailPage() {
         <CardHeader>
           <CardTitle>加入關注</CardTitle>
         </CardHeader>
-        <CardBody className="flex gap-3">
-          <FavoriteButton kind="team" id={m.homeTeam.id} />
-          <FavoriteButton kind="team" id={m.awayTeam.id} />
+        <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+          {[m.homeTeam, m.awayTeam].map((team) => (
+            <div key={team.id} className="flex items-center gap-2">
+              <TeamFlag team={team} size={24} />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700 sm:flex-none">
+                {teamName(team)}
+              </span>
+              <FavoriteButton kind="team" id={team.id} />
+            </div>
+          ))}
         </CardBody>
       </Card>
 
@@ -190,6 +219,16 @@ function TeamSide({
       <span className="wrap-break-word text-sm font-semibold text-slate-900 sm:text-lg">{name}</span>
     </div>
   );
+}
+
+// Timeline order: earliest first; events without a minute go last.
+function sortEvents(events: MatchEvent[]): MatchEvent[] {
+  return [...events].sort((a, b) => {
+    if (a.minute == null || b.minute == null) {
+      return (a.minute == null ? 1 : 0) - (b.minute == null ? 1 : 0);
+    }
+    return a.minute - b.minute || (a.extraMinute ?? 0) - (b.extraMinute ?? 0);
+  });
 }
 
 function FactorList({ title, items }: { title: string; items: string[] }) {

@@ -13,6 +13,18 @@ import { DeepChat } from '@/components/ai/DeepChat';
 import { AbilityMeter } from '@/components/charts/AbilityMeter';
 import { LoadingState, ErrorState, EmptyState } from '@/components/ui/states';
 import { teamName, teamTierLabel, eliminationLabel } from '@/lib/formatters';
+import type { PlayerPosition, PlayerSummary } from '@/types/api';
+
+// Roster order: GK → DF → MF → FW, highest overall score first within each line.
+const POSITION_ORDER: Record<PlayerPosition, number> = { GK: 0, DF: 1, MF: 2, FW: 3, UNKNOWN: 4 };
+
+function sortRoster(players: PlayerSummary[]): PlayerSummary[] {
+  return [...players].sort(
+    (a, b) =>
+      POSITION_ORDER[a.position] - POSITION_ORDER[b.position] ||
+      (b.overallScore ?? -1) - (a.overallScore ?? -1),
+  );
+}
 
 export default function TeamDetailPage() {
   const { teamId } = useParams<{ teamId: string }>();
@@ -78,9 +90,11 @@ export default function TeamDetailPage() {
             <LoadingState />
           ) : matches.data && matches.data.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              {matches.data.map((m) => (
-                <MatchCard key={m.id} match={m} />
-              ))}
+              {[...matches.data]
+                .sort((a, b) => new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime())
+                .map((m) => (
+                  <MatchCard key={m.id} match={m} />
+                ))}
             </div>
           ) : (
             <EmptyState />
@@ -97,7 +111,7 @@ export default function TeamDetailPage() {
             <LoadingState />
           ) : players.data && players.data.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {players.data.map((p) => (
+              {sortRoster(players.data).map((p) => (
                 <PlayerCard key={p.id} player={p} />
               ))}
             </div>

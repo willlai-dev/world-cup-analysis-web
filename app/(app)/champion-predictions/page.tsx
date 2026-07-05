@@ -22,7 +22,7 @@ import { aiErrorMessage, isQuotaError } from '@/lib/ai';
 import { COPY } from '@/lib/constants';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { LoadingState, ErrorState, EmptyState } from '@/components/ui/states';
-import { teamName, teamTierLabel, eliminationLabel, formatDateTime } from '@/lib/formatters';
+import { teamName, teamTierLabel, eliminationLabel, formatDateTime, jobStatusLabel } from '@/lib/formatters';
 import type { AiReport, ChampionPredictionEntry } from '@/types/api';
 
 export default function ChampionPredictionsPage() {
@@ -82,7 +82,7 @@ export default function ChampionPredictionsPage() {
         <>
           <Card>
             <CardBody className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-slate-600">
-              <span>本次運算狀態：{query.data.status}</span>
+              <span>本次運算狀態：{jobStatusLabel(query.data.status)}</span>
               <span>更新於 {formatDateTime(query.data.completedAt ?? query.data.createdAt)}</span>
             </CardBody>
           </Card>

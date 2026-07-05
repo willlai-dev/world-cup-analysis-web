@@ -1,5 +1,7 @@
 import type {
+  JobStatus,
   MatchStage,
+  MatchStatus,
   NewsCategory,
   PlayerPosition,
   PlayerRatingTier,
@@ -84,6 +86,54 @@ const MATCH_STAGE_LABELS: Record<MatchStage, string> = {
 export function stageLabel(stage?: MatchStage | null): string {
   if (!stage) return '未定';
   return MATCH_STAGE_LABELS[stage] ?? stage;
+}
+
+const MATCH_STATUS_LABELS: Record<MatchStatus, string> = {
+  SCHEDULED: '未開始',
+  LIVE: '進行中',
+  FINISHED: '已結束',
+  POSTPONED: '延期',
+  CANCELLED: '取消',
+};
+
+export function matchStatusLabel(status: MatchStatus): string {
+  return MATCH_STATUS_LABELS[status] ?? status;
+}
+
+// Match event types are free-form strings from the data provider (not an enum);
+// translate the common ones and fall back to the raw value.
+const MATCH_EVENT_LABELS: Record<string, string> = {
+  GOAL: '進球',
+  OWN_GOAL: '烏龍球',
+  PENALTY: '十二碼進球',
+  PENALTY_GOAL: '十二碼進球',
+  PENALTY_MISSED: '十二碼未進',
+  MISSED_PENALTY: '十二碼未進',
+  YELLOW_CARD: '黃牌',
+  RED_CARD: '紅牌',
+  SECOND_YELLOW: '兩黃一紅',
+  YELLOW_RED_CARD: '兩黃一紅',
+  SUBSTITUTION: '換人',
+  VAR: 'VAR 判定',
+  INJURY: '受傷',
+};
+
+export function matchEventLabel(eventType: string): string {
+  const key = eventType.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return MATCH_EVENT_LABELS[key] ?? eventType;
+}
+
+// User-facing job status (champion prediction runs). The admin console keeps its
+// own wording/tones in admin/jobs.
+const JOB_STATUS_LABELS: Record<JobStatus, string> = {
+  PENDING: '等待中',
+  RUNNING: '運算中',
+  DONE: '已完成',
+  FAILED: '失敗',
+};
+
+export function jobStatusLabel(status: JobStatus): string {
+  return JOB_STATUS_LABELS[status] ?? status;
 }
 
 const NEWS_CATEGORY_LABELS: Record<NewsCategory, string> = {
