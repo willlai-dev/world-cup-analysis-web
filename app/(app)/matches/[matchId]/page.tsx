@@ -52,10 +52,10 @@ export default function MatchDetailPage() {
             </span>
             <Badge tone="neutral">{m.status}</Badge>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <TeamSide name={teamName(m.homeTeam)} team={m.homeTeam} />
-            <div className="text-center">
-              <div className="text-3xl font-bold text-slate-900">
+            <div className="shrink-0 px-1 text-center sm:px-2">
+              <div className="text-2xl font-bold text-slate-900 sm:text-3xl">
                 {formatScore(m.homeScore, m.awayScore)}
               </div>
               <div className="text-xs text-slate-400">{formatDateTime(m.kickoffAt)}</div>
@@ -179,10 +179,15 @@ function TeamSide({
   name: string;
   align?: 'left' | 'right';
 }) {
+  // Mobile: flag stacked above the name (centered); sm+: flag beside the name.
   return (
-    <div className={`flex flex-1 items-center gap-3 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+    <div
+      className={`flex min-w-0 flex-1 flex-col items-center gap-1 text-center sm:flex-row sm:gap-3 ${
+        align === 'right' ? 'sm:flex-row-reverse sm:text-right' : 'sm:text-left'
+      }`}
+    >
       <TeamFlag team={team} size={40} />
-      <span className="text-lg font-semibold text-slate-900">{name}</span>
+      <span className="wrap-break-word text-sm font-semibold text-slate-900 sm:text-lg">{name}</span>
     </div>
   );
 }

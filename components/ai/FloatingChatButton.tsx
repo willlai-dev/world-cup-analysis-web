@@ -26,7 +26,7 @@ export function FloatingChatButton() {
         aria-label={isPending ? 'AI 回答產生中，點擊查看' : '開啟 AI 問答'}
         data-testid="floating-chat-button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-2xl text-white shadow-lg transition-transform hover:scale-105"
+        className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-2xl text-white shadow-lg transition-transform hover:scale-105 sm:bottom-6 sm:right-6"
       >
         💬
         {isPending && (

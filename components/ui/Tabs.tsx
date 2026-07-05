@@ -11,7 +11,7 @@ export function Tabs({ items, initialId }: { items: TabItem[]; initialId?: strin
 
   return (
     <div>
-      <div role="tablist" className="flex gap-1 border-b border-slate-200">
+      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-slate-200">
         {items.map((item) => (
           <button
             key={item.id}
@@ -19,7 +19,7 @@ export function Tabs({ items, initialId }: { items: TabItem[]; initialId?: strin
             aria-selected={item.id === active}
             onClick={() => setActive(item.id)}
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors',
+              'shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors',
               item.id === active
                 ? 'border-b-2 border-brand-600 text-brand-700'
                 : 'text-slate-500 hover:text-slate-800',

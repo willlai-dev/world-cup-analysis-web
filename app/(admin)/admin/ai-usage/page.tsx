@@ -193,7 +193,7 @@ function BarList({ rows }: { rows: { label: string; value: number }[] }) {
     <ul className="flex flex-col gap-3">
       {sorted.map((row) => (
         <li key={row.label} className="flex items-center gap-3">
-          <span className="w-40 shrink-0 truncate text-sm text-slate-700" title={row.label}>
+          <span className="w-28 shrink-0 truncate text-sm text-slate-700 sm:w-40" title={row.label}>
             {row.label}
           </span>
           <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">

@@ -81,7 +81,7 @@ export default function ChampionPredictionsPage() {
       ) : (
         <>
           <Card>
-            <CardBody className="flex items-center justify-between text-sm text-slate-600">
+            <CardBody className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-slate-600">
               <span>本次運算狀態：{query.data.status}</span>
               <span>更新於 {formatDateTime(query.data.completedAt ?? query.data.createdAt)}</span>
             </CardBody>

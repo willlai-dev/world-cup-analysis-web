@@ -49,7 +49,7 @@ export function AiReportCard({ title = 'AI 分析', report, isLoading, state }: 
 
   return (
     <Card data-testid="ai-report-card" data-state={displayState}>
-      <CardHeader className="flex items-center justify-between gap-2">
+      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
         <CardTitle>{report?.title || title}</CardTitle>
         {displayState === 'done' && report && (
           <div className="flex flex-wrap items-center justify-end gap-2">

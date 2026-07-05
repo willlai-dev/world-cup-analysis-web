@@ -69,15 +69,21 @@ export function Header() {
 
       {isAppUser && (
         <nav className="flex items-center gap-1 overflow-x-auto border-t border-slate-100 px-4 py-2 md:hidden">
-          {APP_NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-slate-600"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {APP_NAV.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'whitespace-nowrap rounded-md px-3 py-1.5 text-sm',
+                  active ? 'bg-brand-50 font-medium text-brand-700' : 'text-slate-600',
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
       )}
     </header>

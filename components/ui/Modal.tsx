@@ -31,17 +31,17 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-lg bg-white shadow-xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col rounded-lg bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="border-b border-slate-100 px-5 py-4">
+          <div className="shrink-0 border-b border-slate-100 px-5 py-4">
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           </div>
         )}
-        <div className="px-5 py-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-5 py-4">
             {footer}
           </div>
         )}

@@ -26,11 +26,11 @@ export default function NewsDetailPage() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardBody className="flex flex-col gap-3">
-          <div className="flex items-center justify-between text-sm text-slate-500">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-slate-500">
             <span>{n.sourceName}</span>
             <span>{formatDateTime(n.publishedAt)}</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">{n.titleEn}</h1>
+          <h1 className="wrap-break-word text-2xl font-bold text-slate-900">{n.titleEn}</h1>
           {n.titleZh && <p className="text-lg text-slate-700">{n.titleZh}</p>}
 
           <div className="flex flex-wrap items-center gap-1.5">
