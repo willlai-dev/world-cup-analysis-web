@@ -415,7 +415,7 @@ export default function AdminJobsPage() {
               從清單選擇要重新分析的國家。
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              {teamsQuery.isError ? (
+              {teamsQuery.isError || (teamsQuery.isSuccess && teamOptions.length === 0) ? (
                 <Input
                   label="球隊 ID"
                   placeholder="seed-team-BRA"
@@ -437,7 +437,7 @@ export default function AdminJobsPage() {
                   disabled={busy || teamsQuery.isLoading}
                   onChange={(e) => setTeamId(e.target.value)}
                 />
-              )}
+              )
               <label className="flex h-10 items-center gap-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
