@@ -435,7 +435,7 @@ export default function AdminJobsPage() {
                   disabled={busy || teamsQuery.isLoading}
                   onChange={(e) => setTeamId(e.target.value)}
                 />
-              )
+              )}
               <label className="flex h-10 items-center gap-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
