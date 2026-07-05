@@ -53,8 +53,15 @@ export default function MatchesPage() {
         <Input
           label="日期起"
           type="date"
+          max={filters.dateTo || undefined}
           value={filters.dateFrom ?? ''}
-          onChange={(e) => update({ dateFrom: e.target.value })}
+          onChange={(e) => {
+            const dateFrom = e.target.value;
+            // Clear an existing dateTo that would now be before dateFrom,
+            // so we never submit an inverted range to the API.
+            const dateTo = filters.dateTo && dateFrom > filters.dateTo ? '' : filters.dateTo;
+            update({ dateFrom, dateTo });
+          }}
         />
         <Input
           label="日期迄"
