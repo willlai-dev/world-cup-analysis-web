@@ -99,6 +99,13 @@ const DOMAIN_PRESETS: PresetDef[] = [
     desc: '重算冠軍預測（吃現有球隊評分，建議先更新國家／球隊）。',
     variant: 'outline',
   },
+  {
+    preset: 'RETRO',
+    title: '回補＋結算',
+    cta: '回補預測並結算',
+    desc: '對「完賽但沒有賽前分析」的比賽回補賽前視角預測，再結算所有預測 vs 實際比分（供預測戰績頁）。',
+    variant: 'outline',
+  },
 ];
 
 const JOB_TYPE_LABELS: Record<JobType, string> = {

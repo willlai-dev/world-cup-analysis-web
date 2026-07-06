@@ -477,6 +477,60 @@ export type AiUsageQuery = {
   taskType?: string;
 };
 
+// ----- Prediction insights (PREMIUM) — GET /insights/predictions -----
+
+export type PredictionTendency = 'HOME' | 'DRAW' | 'AWAY';
+
+// Hit-rate aggregate over a set of settled predictions. Rates are 0-1, null when total=0.
+export type PredictionInsightsBucket = {
+  total: number;
+  tendencyHits: number;
+  tendencyHitRate: number | null;
+  exactScoreHits: number;
+  exactScoreHitRate: number | null;
+  top3ScoreHits: number;
+  top3ScoreHitRate: number | null;
+  // Mean multi-class Brier (0 best, 2 worst); null when no scored leans.
+  avgBrier: number | null;
+};
+
+// One settled prediction (prediction snapshot vs the final score).
+export type PredictionOutcomeItem = {
+  matchId: string;
+  stage: MatchStage;
+  kickoffAt: string;
+  homeTeam: TeamSummary;
+  awayTeam: TeamSummary;
+  actualHomeScore: number;
+  actualAwayScore: number;
+  // true = prediction was backfilled after the match (knowledge-contamination risk).
+  retro: boolean;
+  predictedAt: string;
+  homeWinLean: number | null;
+  drawLean: number | null;
+  awayWinLean: number | null;
+  likelyScorelines: LikelyScoreline[];
+  tendencyPredicted: PredictionTendency | null;
+  tendencyActual: PredictionTendency;
+  tendencyHit: boolean;
+  exactScoreHit: boolean;
+  top3ScoreHit: boolean;
+  brierScore: number | null;
+};
+
+export type PredictionInsights = {
+  summary: {
+    overall: PredictionInsightsBucket;
+    // Predictions genuinely made before kickoff — the only honest accuracy signal.
+    real: PredictionInsightsBucket;
+    // Backfilled retro predictions — shown separately, never blended into `real`.
+    retro: PredictionInsightsBucket;
+  };
+  byStage: ({ stage: MatchStage } & PredictionInsightsBucket)[];
+  // Newest kickoff first.
+  items: PredictionOutcomeItem[];
+};
+
 // ----- Admin manual data pipeline (docs/ADMIN_MANUAL_JOBS_FRONTEND.md) -----
 
 // The individual jobs a pipeline can run, in the order presets execute them.
