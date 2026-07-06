@@ -311,10 +311,9 @@ function OutcomeRow({ item }: { item: PredictionOutcomeItem }) {
       <td className="px-4 py-3 text-slate-600">{stageLabel(item.stage)}</td>
       <td className="px-4 py-3 whitespace-nowrap">
         <span className="font-medium text-slate-800">{tendencyLabel(item.tendencyPredicted)}</span>
-        {item.homeWinLean != null && (
+        {item.homeWinLean != null && item.drawLean != null && item.awayWinLean != null && (
           <span className="ml-1 text-xs text-slate-400">
-            {Math.round(item.homeWinLean)}/{Math.round(item.drawLean ?? 0)}/
-            {Math.round(item.awayWinLean ?? 0)}
+            {Math.round(item.homeWinLean)}/{Math.round(item.drawLean)}/{Math.round(item.awayWinLean)}
           </span>
         )}
       </td>
