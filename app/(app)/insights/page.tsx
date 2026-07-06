@@ -81,6 +81,26 @@ export default function InsightsPage() {
             )}
           </section>
 
+          {data.calibration && (
+            <section>
+              <h2 className="mb-1 text-lg font-bold text-slate-900">機率校正</h2>
+              <p className="mb-4 text-sm text-slate-500">
+                比較模型「平均信心」與「實際命中率」，用係數 λ 調整之後每場預測的機率
+                （λ&lt;1 代表模型過度自信、機率會被收斂；λ&gt;1 則放大）。只採計真實賽前預測。
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <CalibrationTile label="樣本數" value={`${data.calibration.sampleSize} 場`}
+                  hint={data.calibration.applied ? '校正已啟用' : '未滿 10 場，尚未啟用'} />
+                <CalibrationTile label="平均信心" value={formatPercent(data.calibration.avgConfidence)}
+                  hint="模型給自家預測傾向的平均機率" />
+                <CalibrationTile label="實際命中率" value={formatPercent(data.calibration.tendencyHitRate)}
+                  hint="預測傾向真的發生的比例" />
+                <CalibrationTile label="校正係數 λ" value={data.calibration.lambda.toFixed(2)}
+                  hint={data.calibration.lambda < 1 ? '模型偏過度自信 → 收斂' : '模型偏保守 → 放大'} />
+              </div>
+            </section>
+          )}
+
           <section>
             <h2 className="mb-4 text-lg font-bold text-slate-900">分輪次統計</h2>
             {data.byStage.length === 0 ? (
@@ -127,6 +147,63 @@ export default function InsightsPage() {
             )}
           </section>
 
+          {data.byTeam.length > 0 && (
+            <section>
+              <h2 className="mb-1 text-lg font-bold text-slate-900">各隊預測偏差</h2>
+              <p className="mb-4 text-sm text-slate-500">
+                「超出預期」代表實際結果比預測傾向更好（例如預測輸球卻贏了）；含回補樣本，僅供參考。
+              </p>
+              <Card>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                        <th className="px-4 py-3 font-medium">國家隊</th>
+                        <th className="px-4 py-3 text-right font-medium">場次</th>
+                        <th className="px-4 py-3 text-right font-medium">傾向命中率</th>
+                        <th className="px-4 py-3 text-right font-medium">超出預期</th>
+                        <th className="px-4 py-3 text-right font-medium">低於預期</th>
+                        <th className="px-4 py-3 text-right font-medium">回補樣本</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.byTeam.map((t) => (
+                        <tr key={t.team.id} className="border-b border-slate-100 last:border-0">
+                          <td className="px-4 py-3">
+                            <span className="flex items-center gap-2 whitespace-nowrap font-medium text-slate-800">
+                              <TeamFlag team={t.team} size={18} />
+                              {teamName(t.team)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-600">{t.total}</td>
+                          <td className="px-4 py-3 text-right text-slate-800">
+                            {formatPercent(t.tendencyHitRate)}
+                            <span className="ml-1 text-xs text-slate-400">({t.tendencyHits}/{t.total})</span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {t.overPerformed > 0 ? (
+                              <span className="font-medium text-green-700">+{t.overPerformed}</span>
+                            ) : (
+                              <span className="text-slate-400">0</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {t.underPerformed > 0 ? (
+                              <span className="font-medium text-red-700">-{t.underPerformed}</span>
+                            ) : (
+                              <span className="text-slate-400">0</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-400">{t.retroCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </section>
+          )}
+
           <section>
             <h2 className="mb-1 text-lg font-bold text-slate-900">逐場對照</h2>
             <p className="mb-4 text-sm text-slate-500">最近完賽在前；Brier 越低代表預測機率越貼近實際結果（0 最佳、2 最差）。</p>
@@ -161,6 +238,18 @@ export default function InsightsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function CalibrationTile({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <Card>
+      <CardBody>
+        <p className="text-xs text-slate-500">{label}</p>
+        <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
+        <p className="mt-0.5 text-xs text-slate-400">{hint}</p>
+      </CardBody>
+    </Card>
   );
 }
 

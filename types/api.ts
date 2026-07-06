@@ -212,6 +212,15 @@ export type MatchPrediction = {
   riskNotes: string[];
   report?: AiReport | null;
   sourceUpdatedAt?: string | null;
+  // Program-rule calibrated probabilities (0-100, sum 100), scaled by measured
+  // over/under-confidence of past real predictions; null until enough samples.
+  calibrated?: {
+    homeWinProbability: number;
+    drawProbability: number;
+    awayWinProbability: number;
+    lambda: number;
+    sampleSize: number;
+  } | null;
 };
 
 // ----- structuredJson shapes (AiReport.structuredJson is `unknown`; parse defensively) -----
@@ -518,6 +527,17 @@ export type PredictionOutcomeItem = {
   brierScore: number | null;
 };
 
+// Per-team predicted-vs-actual bias (program rules; includes retro rows, counted).
+export type PredictionTeamBias = {
+  team: TeamSummary;
+  total: number;
+  retroCount: number;
+  tendencyHits: number;
+  tendencyHitRate: number | null;
+  overPerformed: number;
+  underPerformed: number;
+};
+
 export type PredictionInsights = {
   summary: {
     overall: PredictionInsightsBucket;
@@ -527,6 +547,16 @@ export type PredictionInsights = {
     retro: PredictionInsightsBucket;
   };
   byStage: ({ stage: MatchStage } & PredictionInsightsBucket)[];
+  // Most-sampled teams first.
+  byTeam: PredictionTeamBias[];
+  // Current program-rule calibration (real samples only); null when nothing settled.
+  calibration: {
+    sampleSize: number;
+    avgConfidence: number;
+    tendencyHitRate: number;
+    lambda: number;
+    applied: boolean;
+  } | null;
   // Newest kickoff first.
   items: PredictionOutcomeItem[];
 };
