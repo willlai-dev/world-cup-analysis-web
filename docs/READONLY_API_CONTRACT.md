@@ -2,7 +2,7 @@
 
 This document describes the API that is actually implemented today in `apps/api`.
 
-- Generated from source-code scan on 2026-06-30.
+- Generated from source-code scan on 2026-07-06.
 - This is a read-only contract for a Next.js frontend agent.
 - Do not infer hidden routes, hidden fields, or future behavior.
 - If something is not stated here, assume it is not safe to use from the frontend.
@@ -39,8 +39,8 @@ Additional auth notes:
 - Because auth is cookie-based, browser requests that must send or receive auth state must use `credentials: "include"`.
 - If `GET /api/auth/me` returns `401`, treat the viewer as Guest.
 - If login succeeds, honor `data.redirectPath`. Current backend behavior is `ADMIN -> /admin/accounts`, `USER/PREMIUM -> /matches`.
-- `ADMIN` accounts must not be routed into general user product pages. The backend returns `403` on user-domain APIs guarded by `NonAdminUserGuard`.
-- `USER` accounts must not call PREMIUM-only routes. The backend returns `403` with `error.code = "FORBIDDEN"` on those routes.
+- `ADMIN` accounts are still routed to `/admin/accounts` by default, but ADMIN is now a **feature superuser**: the backend permits ADMIN on every user-domain API (including PREMIUM-only routes such as translate / recalculate / deep-chat / AI chat). The per-endpoint "Access" cells below therefore also allow ADMIN even where they say `USER`/`PREMIUM`.
+- `USER` accounts must not call PREMIUM-only routes. The backend returns `403` with `error.code = "FORBIDDEN"` on those routes (this applies to `USER` only — `PREMIUM` and `ADMIN` pass).
 - Product UI must not call backend-only routes such as `/api/jobs/*`, `/api/health`, `/api/health/db`, `/docs`, and `IMPLEMENTATION_UNCLEAR: /docs-json`.
 - Do not build frontend logic on `error.message`. Messages are mixed Chinese/English and should be treated as display text only. Use `error.code` for programmatic handling.
 - Request validation is strict. Global `ValidationPipe` is configured with `whitelist: true`, `transform: true`, and `forbidNonWhitelisted: true`. Do not send speculative request fields.
@@ -429,11 +429,15 @@ All routes in this section already include the current `/api` prefix.
 
 Notes:
 
-- `featuredMatches` are the next 5 matches ordered by `kickoffAt ASC`.
+- `featuredMatches` returns up to 6 matches: recently `FINISHED` matches first (ordered by
+  `kickoffAt DESC`, i.e. newest results first), backfilled with `LIVE`/`SCHEDULED` matches
+  (ordered by `kickoffAt ASC`) when fewer than 6 finished matches exist. The list can therefore
+  mix statuses — frontend should branch on each item's `status`.
 - `championSummary` is the top 5 entries from the latest champion-prediction run, or `[]` if no run exists.
-- `featuredTeams` returns up to 6 teams ordered by `championScore DESC`.
-- `featuredPlayers` returns up to 6 players ordered by `overallScore DESC`.
-- `newsHighlights` returns up to 5 news items ordered by `publishedAt DESC`.
+- `featuredTeams` returns up to 8 **non-eliminated** teams (`isEliminated = false`), ordered by
+  `championScore DESC` (nulls last), then `worldRanking ASC` (nulls last).
+- `featuredPlayers` returns up to 8 players ordered by `overallScore DESC` (nulls last); each item includes nested `team`.
+- `newsHighlights` returns up to 6 news items ordered by `publishedAt DESC`.
 
 ### 5.2 Auth
 
@@ -483,7 +487,7 @@ Validation and behavior:
   - `bio` max length `1000`
   - No other writable fields are implemented.
   - `email`, `password`, `role`, and `status` cannot be updated here.
-- `ADMIN` receives `403 FORBIDDEN` on all `/api/users/*` routes.
+- `ADMIN` may also call `/api/users/*` routes (feature superuser); these are no longer admin-blocked.
 
 ### 5.4 Admin
 
@@ -735,15 +739,15 @@ probabilityText, keyReason}], dataLimitations }`). For runs created before this 
 
 ### 5.11 AI Chat
 
-| Method | Path           | Status | Access                   | Request                  | Success `data`  |
-| ------ | -------------- | ------ | ------------------------ | ------------------------ | --------------- |
-| POST   | `/api/ai/chat` | 201    | `USER` or `PREMIUM` only | `{ question, history? }` | `ChatAnswerDto` |
+| Method | Path           | Status | Access                       | Request                  | Success `data`  |
+| ------ | -------------- | ------ | ---------------------------- | ------------------------ | --------------- |
+| POST   | `/api/ai/chat` | 201    | `USER`, `PREMIUM` or `ADMIN` | `{ question, history? }` | `ChatAnswerDto` |
 
 Behavior notes:
 
 - `question` length must be `1..1000`.
 - `history?`: optional array of prior conversation turns, oldest→newest, each `{ role: "user" | "assistant", content: string }` (`content` ≤ 2000 chars, array ≤ 20 items). The backend uses only the **last 3 Q&A pairs (6 turns)**; extra turns are trimmed server-side. Frontend keeps and sends the visible chat log — the backend stores no conversation state.
-- `ADMIN` receives `403 FORBIDDEN` here.
+- `ADMIN` may also call this endpoint (feature superuser); admin shares the `PREMIUM` daily quota tier.
 - Routes through the AI router `GENERAL_CHAT` (NVIDIA Super → Qwen Plus) with AI usage logging.
 - Under `AI_MOCK_MODE=false` the answer is **grounded in a DB context** built from the question: intent is classified (match / team / player / news / champion / mixed / unknown), referenced teams/players are matched (recent user turns help resolve references like「他」), and only the relevant tables are queried. When nothing relevant is found the strict Global Skill answers「目前資料不足」. Prior turns are sent to the model with the current question flagged `【本次提問】`.
 - **Entity fixtures bundling:** when a team or player is named, the snapshot also includes that team's fixtures (recent results + upcoming) — so「接下來法國對陣誰 / Mbappe 下一場」are answerable even without a fixture keyword. For general fixture questions (no team named) the snapshot includes recent finished + live + a multi-day list of upcoming `SCHEDULED` matches plus a `now` timestamp, so「未開始 / 今天 / 明天 / 某月某日」can be answered from the snapshot.
