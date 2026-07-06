@@ -113,7 +113,9 @@ const JOB_TYPE_LABELS: Record<JobType, string> = {
   GENERATE_TEAM_RATINGS: '球隊評分',
   GENERATE_PLAYER_STATUS: '球員近況',
   GENERATE_MATCH_ANALYSIS: '賽事分析',
+  GENERATE_RETRO_ANALYSIS: '回補賽前分析',
   GENERATE_CHAMPION_PREDICTIONS: '冠軍預測',
+  SCORE_PREDICTIONS: '預測結算',
 };
 
 const STATUS_META: Record<JobStatus, { label: string; tone: BadgeTone }> = {

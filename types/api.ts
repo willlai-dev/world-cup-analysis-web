@@ -479,7 +479,7 @@ export type AiUsageQuery = {
 
 // ----- Admin manual data pipeline (docs/ADMIN_MANUAL_JOBS_FRONTEND.md) -----
 
-// The 12 individual jobs a pipeline can run, in the order presets execute them.
+// The individual jobs a pipeline can run, in the order presets execute them.
 export type JobType =
   | 'SYNC_TEAMS'
   | 'SYNC_PLAYERS'
@@ -492,11 +492,14 @@ export type JobType =
   | 'GENERATE_TEAM_RATINGS'
   | 'GENERATE_PLAYER_STATUS'
   | 'GENERATE_MATCH_ANALYSIS'
-  | 'GENERATE_CHAMPION_PREDICTIONS';
+  | 'GENERATE_RETRO_ANALYSIS'
+  | 'GENERATE_CHAMPION_PREDICTIONS'
+  | 'SCORE_PREDICTIONS';
 
 // Preset combinations for POST /admin/jobs/run (default FULL). `jobs` overrides these.
 // FULL/SYNC/GENERATE are whole-DB presets; TEAMS/PLAYERS/MATCHES/NEWS/CHAMPION are
 // per-domain (sync + that domain's AI analysis) so a single area can be refreshed.
+// RETRO backfills pre-match-perspective analyses for finished matches, then settles.
 export type PipelinePreset =
   | 'FULL'
   | 'SYNC'
@@ -505,7 +508,8 @@ export type PipelinePreset =
   | 'PLAYERS'
   | 'MATCHES'
   | 'NEWS'
-  | 'CHAMPION';
+  | 'CHAMPION'
+  | 'RETRO';
 
 // One execution record from GET /admin/jobs/runs (newest first). `metadata` shape
 // varies by job (sync/fetch vs AI-generate vs skipped vs error) — parse defensively.
