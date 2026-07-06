@@ -212,6 +212,15 @@ export type MatchPrediction = {
   riskNotes: string[];
   report?: AiReport | null;
   sourceUpdatedAt?: string | null;
+  // Program-rule calibrated probabilities (0-100, sum 100), scaled by measured
+  // over/under-confidence of past real predictions; null until enough samples.
+  calibrated?: {
+    homeWinProbability: number;
+    drawProbability: number;
+    awayWinProbability: number;
+    lambda: number;
+    sampleSize: number;
+  } | null;
 };
 
 // ----- structuredJson shapes (AiReport.structuredJson is `unknown`; parse defensively) -----
@@ -477,9 +486,84 @@ export type AiUsageQuery = {
   taskType?: string;
 };
 
+// ----- Prediction insights (PREMIUM) — GET /insights/predictions -----
+
+export type PredictionTendency = 'HOME' | 'DRAW' | 'AWAY';
+
+// Hit-rate aggregate over a set of settled predictions. Rates are 0-1, null when total=0.
+export type PredictionInsightsBucket = {
+  total: number;
+  tendencyHits: number;
+  tendencyHitRate: number | null;
+  exactScoreHits: number;
+  exactScoreHitRate: number | null;
+  top3ScoreHits: number;
+  top3ScoreHitRate: number | null;
+  // Mean multi-class Brier (0 best, 2 worst); null when no scored leans.
+  avgBrier: number | null;
+};
+
+// One settled prediction (prediction snapshot vs the final score).
+export type PredictionOutcomeItem = {
+  matchId: string;
+  stage: MatchStage;
+  kickoffAt: string;
+  homeTeam: TeamSummary;
+  awayTeam: TeamSummary;
+  actualHomeScore: number;
+  actualAwayScore: number;
+  // true = prediction was backfilled after the match (knowledge-contamination risk).
+  retro: boolean;
+  predictedAt: string;
+  homeWinLean: number | null;
+  drawLean: number | null;
+  awayWinLean: number | null;
+  likelyScorelines: LikelyScoreline[];
+  tendencyPredicted: PredictionTendency | null;
+  tendencyActual: PredictionTendency;
+  tendencyHit: boolean;
+  exactScoreHit: boolean;
+  top3ScoreHit: boolean;
+  brierScore: number | null;
+};
+
+// Per-team predicted-vs-actual bias (program rules; includes retro rows, counted).
+export type PredictionTeamBias = {
+  team: TeamSummary;
+  total: number;
+  retroCount: number;
+  tendencyHits: number;
+  tendencyHitRate: number | null;
+  overPerformed: number;
+  underPerformed: number;
+};
+
+export type PredictionInsights = {
+  summary: {
+    overall: PredictionInsightsBucket;
+    // Predictions genuinely made before kickoff — the only honest accuracy signal.
+    real: PredictionInsightsBucket;
+    // Backfilled retro predictions — shown separately, never blended into `real`.
+    retro: PredictionInsightsBucket;
+  };
+  byStage: ({ stage: MatchStage } & PredictionInsightsBucket)[];
+  // Most-sampled teams first.
+  byTeam: PredictionTeamBias[];
+  // Current program-rule calibration (real samples only); null when nothing settled.
+  calibration: {
+    sampleSize: number;
+    avgConfidence: number;
+    tendencyHitRate: number;
+    lambda: number;
+    applied: boolean;
+  } | null;
+  // Newest kickoff first.
+  items: PredictionOutcomeItem[];
+};
+
 // ----- Admin manual data pipeline (docs/ADMIN_MANUAL_JOBS_FRONTEND.md) -----
 
-// The 12 individual jobs a pipeline can run, in the order presets execute them.
+// The individual jobs a pipeline can run, in the order presets execute them.
 export type JobType =
   | 'SYNC_TEAMS'
   | 'SYNC_PLAYERS'
@@ -492,11 +576,14 @@ export type JobType =
   | 'GENERATE_TEAM_RATINGS'
   | 'GENERATE_PLAYER_STATUS'
   | 'GENERATE_MATCH_ANALYSIS'
-  | 'GENERATE_CHAMPION_PREDICTIONS';
+  | 'GENERATE_RETRO_ANALYSIS'
+  | 'GENERATE_CHAMPION_PREDICTIONS'
+  | 'SCORE_PREDICTIONS';
 
 // Preset combinations for POST /admin/jobs/run (default FULL). `jobs` overrides these.
 // FULL/SYNC/GENERATE are whole-DB presets; TEAMS/PLAYERS/MATCHES/NEWS/CHAMPION are
 // per-domain (sync + that domain's AI analysis) so a single area can be refreshed.
+// RETRO backfills pre-match-perspective analyses for finished matches, then settles.
 export type PipelinePreset =
   | 'FULL'
   | 'SYNC'
@@ -505,7 +592,8 @@ export type PipelinePreset =
   | 'PLAYERS'
   | 'MATCHES'
   | 'NEWS'
-  | 'CHAMPION';
+  | 'CHAMPION'
+  | 'RETRO';
 
 // One execution record from GET /admin/jobs/runs (newest first). `metadata` shape
 // varies by job (sync/fetch vs AI-generate vs skipped vs error) — parse defensively.

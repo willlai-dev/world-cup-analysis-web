@@ -13,6 +13,7 @@ const APP_NAV = [
   { href: routes.teams, label: '國家隊' },
   { href: routes.players, label: '球員' },
   { href: routes.championPredictions, label: '冠軍預測' },
+  { href: routes.insights, label: '預測戰績' },
   { href: routes.news, label: '新聞' },
 ];
 

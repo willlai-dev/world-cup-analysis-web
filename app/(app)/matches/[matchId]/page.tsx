@@ -116,6 +116,24 @@ export default function MatchDetailPage() {
                   { label: '客勝', value: prediction.data.awayWinProbability, colorClass: 'bg-amber-500' },
                 ]}
               />
+              {prediction.data.calibrated && (
+                <div>
+                  <div className="mb-1 flex items-baseline gap-2">
+                    <span className="text-xs font-medium text-slate-600">校正後機率</span>
+                    <span className="text-[11px] text-slate-400">
+                      依據過去 {prediction.data.calibrated.sampleSize} 場賽前預測的實際命中表現調整（λ=
+                      {prediction.data.calibrated.lambda}）
+                    </span>
+                  </div>
+                  <ScoreBar
+                    segments={[
+                      { label: '主勝', value: prediction.data.calibrated.homeWinProbability, colorClass: 'bg-brand-500' },
+                      { label: '和局', value: prediction.data.calibrated.drawProbability, colorClass: 'bg-slate-400' },
+                      { label: '客勝', value: prediction.data.calibrated.awayWinProbability, colorClass: 'bg-amber-500' },
+                    ]}
+                  />
+                </div>
+              )}
               {likelyScorelines.length > 0 && <LikelyScorelines items={likelyScorelines} />}
               {prediction.data.keyFactors.length > 0 && (
                 <FactorList title="關鍵因素" items={prediction.data.keyFactors} />

@@ -11,6 +11,7 @@ export const routes = {
   players: '/players',
   player: (id: string) => `/players/${id}`,
   championPredictions: '/champion-predictions',
+  insights: '/insights',
   news: '/news',
   newsItem: (id: string) => `/news/${id}`,
   profile: '/profile',
