@@ -122,8 +122,8 @@ export type TeamSummary = {
   defenseScore?: number | null;
   statusScore?: number | null;
   // Phase 2: always present on TeamSummary (incl. nested PlayerSummary.team).
-  // true = knocked out in a finished knockout match. NOTE: group-stage elimination
-  // is NOT yet reflected, so false means "not yet eliminated", not "advanced".
+  // true = confirmed out of the tournament (knockout loss, or failed to
+  // advance from the group stage once the round-of-32 bracket is set).
   isEliminated: boolean;
 };
 
@@ -212,14 +212,22 @@ export type MatchPrediction = {
   riskNotes: string[];
   report?: AiReport | null;
   sourceUpdatedAt?: string | null;
-  // Program-rule calibrated probabilities (0-100, sum 100), scaled by measured
-  // over/under-confidence of past real predictions; null until enough samples.
+  // Program-rule calibrated probabilities (0-100, sum 100): temperature scaling
+  // fitted on past real predictions + shrunk per-team bias tilt; null until
+  // enough settled samples exist.
   calibrated?: {
+    method: 'temperature+team-bias';
     homeWinProbability: number;
     drawProbability: number;
     awayWinProbability: number;
-    lambda: number;
+    // Fitted softmax temperature; > 1 = model has been overconfident.
+    temperature: number;
     sampleSize: number;
+    // Applied log-odds shift on each side's win probability; null when 0.
+    homeBiasAdjustment?: number | null;
+    awayBiasAdjustment?: number | null;
+    // likelyScorelines re-scaled to agree with the calibrated 1X2 above.
+    scorelines?: LikelyScoreline[] | null;
   } | null;
 };
 
@@ -554,8 +562,12 @@ export type PredictionInsights = {
     sampleSize: number;
     avgConfidence: number;
     tendencyHitRate: number;
-    lambda: number;
+    // Fitted softmax temperature; > 1 = model has been overconfident.
+    temperature: number;
     applied: boolean;
+    // In-sample backtest: mean multi-class Brier before/after temperature scaling.
+    baselineBrier: number | null;
+    calibratedBrier: number | null;
   } | null;
   // Newest kickoff first.
   items: PredictionOutcomeItem[];

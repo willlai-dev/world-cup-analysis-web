@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   useMatch,
@@ -16,6 +15,7 @@ import { FavoriteButton } from '@/components/cards/FavoriteButton';
 import { AiReportCard } from '@/components/ai/AiReportCard';
 import { DeepChat } from '@/components/ai/DeepChat';
 import { ScoreBar } from '@/components/charts/ScoreBar';
+import { LikelyScorelines } from '@/components/charts/LikelyScorelines';
 import { LoadingState, ErrorState } from '@/components/ui/states';
 import { parseMatchAnalysis, predictionScorelines, structuredSource } from '@/lib/ai';
 import { MATCH_STATUS_TONES } from '@/lib/constants';
@@ -27,7 +27,7 @@ import {
   stageLabel,
   teamName,
 } from '@/lib/formatters';
-import type { LikelyScoreline, MatchEvent } from '@/types/api';
+import type { MatchEvent } from '@/types/api';
 
 export default function MatchDetailPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -116,14 +116,17 @@ export default function MatchDetailPage() {
                   { label: '客勝', value: prediction.data.awayWinProbability, colorClass: 'bg-amber-500' },
                 ]}
               />
-              {prediction.data.calibrated && (
+              {prediction.data.calibrated && prediction.data.calibrated.temperature != null && (
                 <div>
-                  <div className="mb-1 flex items-baseline gap-2">
+                  <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
                     <span className="text-xs font-medium text-slate-600">校正後機率</span>
                     <span className="text-[11px] text-slate-400">
-                      依據過去 {prediction.data.calibrated.sampleSize} 場賽前預測的實際命中表現調整（λ=
-                      {prediction.data.calibrated.lambda}）
+                      依過去 {prediction.data.calibrated.sampleSize} 場賽前預測回測擬合（T=
+                      {prediction.data.calibrated.temperature.toFixed(2)}）
                     </span>
+                    {biasNote(prediction.data.calibrated) && (
+                      <span className="text-[11px] text-slate-400">{biasNote(prediction.data.calibrated)}</span>
+                    )}
                   </div>
                   <ScoreBar
                     segments={[
@@ -134,7 +137,12 @@ export default function MatchDetailPage() {
                   />
                 </div>
               )}
-              {likelyScorelines.length > 0 && <LikelyScorelines items={likelyScorelines} />}
+              {likelyScorelines.length > 0 && (
+                <LikelyScorelines
+                  items={likelyScorelines}
+                  calibratedItems={prediction.data.calibrated?.scorelines ?? null}
+                />
+              )}
               {prediction.data.keyFactors.length > 0 && (
                 <FactorList title="關鍵因素" items={prediction.data.keyFactors} />
               )}
@@ -262,56 +270,14 @@ function FactorList({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-// 最可能比分 (§3): medal-ranked rows — rank + big score + animated bar + probability.
-const SCORELINE_MEDALS = ['🥇', '🥈', '🥉'];
-const SCORELINE_BAR_TONES = ['bg-brand-600', 'bg-brand-500', 'bg-brand-400'];
-// Leader fills to this share of the track (never edge-to-edge); others scale down.
-const SCORELINE_MAX_FILL = 80;
-
-function LikelyScorelines({ items }: { items: LikelyScoreline[] }) {
-  const top = items.slice(0, 3);
-  const max = Math.max(...top.map((s) => s.probability), 1);
-
-  // Grow the bars in from 0 on mount for a subtle reveal.
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setShown(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
-
-  return (
-    <div data-testid="likely-scorelines">
-      <h4 className="mb-2 text-sm font-semibold text-slate-700">最可能比分</h4>
-      <ul className="flex flex-col gap-2.5">
-        {top.map((s, i) => (
-          <li key={s.score} className="flex items-center gap-3">
-            <span className="w-6 text-center text-lg" aria-hidden>
-              {SCORELINE_MEDALS[i] ?? `#${i + 1}`}
-            </span>
-            <span className="w-14 font-mono text-base font-bold tracking-wide text-slate-900">
-              {s.score.replace('-', ' : ')}
-            </span>
-            <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className={`relative h-full overflow-hidden rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
-                  SCORELINE_BAR_TONES[i] ?? SCORELINE_BAR_TONES[2]
-                }`}
-                style={{
-                  width: shown ? `${(s.probability / max) * SCORELINE_MAX_FILL}%` : '0%',
-                  transitionDelay: `${i * 140}ms`,
-                }}
-              >
-                {i === 0 && (
-                  <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-white/40 animate-[score-shine_2.6s_ease-in-out_infinite] motion-reduce:hidden" />
-                )}
-              </div>
-            </div>
-            <span className="w-12 text-right text-sm font-semibold text-slate-700">
-              {Math.round(s.probability)}%
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+// One-line summary of the per-team bias tilts applied by the calibration.
+function biasNote(calibrated: {
+  homeBiasAdjustment?: number | null;
+  awayBiasAdjustment?: number | null;
+}): string | null {
+  const parts: string[] = [];
+  const fmt = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+  if (calibrated.homeBiasAdjustment) parts.push(`主隊 ${fmt(calibrated.homeBiasAdjustment)}`);
+  if (calibrated.awayBiasAdjustment) parts.push(`客隊 ${fmt(calibrated.awayBiasAdjustment)}`);
+  return parts.length > 0 ? `含隊伍偏差調整：${parts.join(' / ')}` : null;
 }

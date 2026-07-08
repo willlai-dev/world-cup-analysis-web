@@ -81,22 +81,31 @@ export default function InsightsPage() {
             )}
           </section>
 
-          {data.calibration && (
+          {data.calibration && data.calibration.temperature != null && (
             <section>
               <h2 className="mb-1 text-lg font-bold text-slate-900">機率校正</h2>
               <p className="mb-4 text-sm text-slate-500">
-                比較模型「平均信心」與「實際命中率」，用係數 λ 調整之後每場預測的機率
-                （λ&lt;1 代表模型過度自信、機率會被收斂；λ&gt;1 則放大）。只採計真實賽前預測。
+                以歷史賽前預測擬合「校正溫度 T」（temperature scaling，最小化 log loss），
+                再依各隊過往的預測偏差做小幅收縮調整（樣本越少調整越小）。只採計真實賽前預測。
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <CalibrationTile label="樣本數" value={`${data.calibration.sampleSize} 場`}
                   hint={data.calibration.applied ? '校正已啟用' : '未滿 10 場，尚未啟用'} />
                 <CalibrationTile label="平均信心" value={formatPercent(data.calibration.avgConfidence)}
                   hint="模型給自家預測傾向的平均機率" />
                 <CalibrationTile label="實際命中率" value={formatPercent(data.calibration.tendencyHitRate)}
                   hint="預測傾向真的發生的比例" />
-                <CalibrationTile label="校正係數 λ" value={data.calibration.lambda.toFixed(2)}
-                  hint={data.calibration.lambda < 1 ? '模型偏過度自信 → 收斂' : '模型偏保守 → 放大'} />
+                <CalibrationTile label="校正溫度 T" value={data.calibration.temperature.toFixed(2)}
+                  hint={data.calibration.temperature > 1 ? '模型偏過度自信 → 機率收斂' : '模型偏保守 → 機率銳化'} />
+                <CalibrationTile
+                  label="Brier 回測"
+                  value={
+                    data.calibration.baselineBrier != null && data.calibration.calibratedBrier != null
+                      ? `${data.calibration.baselineBrier.toFixed(3)} → ${data.calibration.calibratedBrier.toFixed(3)}`
+                      : '—'
+                  }
+                  hint={brierImprovementHint(data.calibration.baselineBrier, data.calibration.calibratedBrier)}
+                />
               </div>
             </section>
           )}
@@ -239,6 +248,14 @@ export default function InsightsPage() {
       )}
     </div>
   );
+}
+
+// In-sample backtest on historical pre-kickoff samples, not a live-accuracy claim.
+function brierImprovementHint(baseline: number | null, calibrated: number | null): string {
+  if (baseline == null || calibrated == null || baseline <= 0) return '歷史賽前樣本回測';
+  const pct = ((baseline - calibrated) / baseline) * 100;
+  if (pct <= 0) return '歷史賽前樣本回測 · 越低越準';
+  return `歷史賽前樣本回測 · 改善 ${pct.toFixed(1)}%`;
 }
 
 function CalibrationTile({ label, value, hint }: { label: string; value: string; hint: string }) {

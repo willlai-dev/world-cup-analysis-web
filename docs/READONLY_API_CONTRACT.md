@@ -229,7 +229,7 @@ type TeamSummary = {
   midfieldScore?: number | null;
   defenseScore?: number | null;
   statusScore?: number | null;
-  isEliminated: boolean; // true once knocked out of the tournament (lost a finished knockout match)
+  isEliminated: boolean; // true once out of the tournament (knockout loss, or missed the round-of-32 bracket after the group stage)
 };
 
 type PlayerSummary = {
@@ -315,6 +315,21 @@ type MatchPredictionDto = {
   riskNotes: string[];
   report?: AiReportDto | null;
   sourceUpdatedAt?: string | null;
+  // Program-rule calibration: temperature scaling fitted on settled REAL
+  // pre-kickoff predictions + shrunk per-team bias tilt. null until >= 10
+  // settled samples. Raw values above stay untouched.
+  calibrated?: {
+    method: 'temperature+team-bias';
+    homeWinProbability: number; // 0-100, the three sum to 100
+    drawProbability: number;
+    awayWinProbability: number;
+    temperature: number; // > 1 = model has been overconfident (flattened)
+    sampleSize: number;
+    homeBiasAdjustment?: number | null; // applied log-odds shift; null when 0
+    awayBiasAdjustment?: number | null;
+    // likelyScorelines re-scaled to agree with the calibrated 1X2 above.
+    scorelines?: { score: string; probability: number }[] | null;
+  } | null;
 };
 
 type NewsTagDto = {
@@ -627,7 +642,7 @@ Query and body contract:
   - `teamId?`: string
   - `position?`: `GK | DF | MF | FW | UNKNOWN`
   - `ratingTier?`: `S | A_PLUS | A | B_PLUS | B | C | UNKNOWN`
-  - `eliminated?`: boolean (`true`/`false`) — filter by the player's national team knockout elimination status (`team.isEliminated`)
+  - `eliminated?`: boolean (`true`/`false`) — filter by the player's national team elimination status (`team.isEliminated`)
   - `sortBy?`: actual service whitelist is `overallScore | attackScore | creativityScore | techniqueScore | defenseScore | physicalScore | formScore | nameEn | createdAt`
   - `sortOrder?`: `asc | desc`
 - `POST /api/players/:playerId/deep-chat` body
