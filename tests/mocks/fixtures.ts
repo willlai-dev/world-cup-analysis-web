@@ -369,10 +369,11 @@ export const matchPredictionFixture: MatchPrediction = {
     sampleSize: 18,
     homeBiasAdjustment: 0.12,
     awayBiasAdjustment: null,
+    // Program blend (AI × Poisson): may contain scores the AI never listed.
     scorelines: [
       { score: '2-1', probability: 16.5 },
       { score: '1-1', probability: 16.3 },
-      { score: '2-0', probability: 11 },
+      { score: '1-0', probability: 12.1 },
     ],
   },
 };

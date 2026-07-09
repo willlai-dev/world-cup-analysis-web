@@ -16,22 +16,22 @@ export function LikelyScorelines({
   items: LikelyScoreline[];
   calibratedItems?: LikelyScoreline[] | null;
 }) {
-  // When calibrated scorelines exist (paired by score string), they drive the
-  // displayed probability, bar width and ranking; the raw AI number stays
-  // visible as secondary context.
-  const calibratedByScore = new Map(
-    (calibratedItems ?? []).map((s) => [s.score, s.probability]),
-  );
-  const top = items
+  // The calibrated list is the program blend (AI × Poisson) and may contain
+  // scores the AI never listed — when present it drives the rows, ranking and
+  // bar widths, with the AI's raw claim (looked up by score) as faint context.
+  const hasCalibrated = (calibratedItems?.length ?? 0) > 0;
+  const rawByScore = new Map(items.map((s) => [s.score, s.probability]));
+  // Sort a copy first, then take the top 3 — the backend list may be longer
+  // than 3 or arrive unsorted, and the input arrays must not be mutated.
+  const top = [...(hasCalibrated ? calibratedItems! : items)]
+    .sort((a, b) => b.probability - a.probability)
     .slice(0, 3)
     .map((s) => ({
       score: s.score,
-      probability: calibratedByScore.get(s.score) ?? s.probability,
-      rawProbability: calibratedByScore.has(s.score) ? s.probability : null,
-    }))
-    .sort((a, b) => b.probability - a.probability);
+      probability: s.probability,
+      rawProbability: hasCalibrated ? (rawByScore.get(s.score) ?? null) : null,
+    }));
   const max = Math.max(...top.map((s) => s.probability), 1);
-  const hasCalibrated = top.some((s) => s.rawProbability !== null);
 
   // Grow the bars in from 0 on mount for a subtle reveal.
   const [shown, setShown] = useState(false);
@@ -45,7 +45,9 @@ export function LikelyScorelines({
       <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
         <h4 className="text-sm font-semibold text-slate-700">最可能比分</h4>
         {hasCalibrated && (
-          <span className="text-[11px] text-slate-400">已依校正後勝負機率調整；淡色為 AI 原始值</span>
+          <span className="text-[11px] text-slate-400">
+            AI × Poisson 模型混合，已對齊校正後勝負機率；淡色為 AI 原始值
+          </span>
         )}
       </div>
       <ul className="flex flex-col gap-2.5">
