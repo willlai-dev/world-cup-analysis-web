@@ -21,14 +21,16 @@ export function LikelyScorelines({
   // bar widths, with the AI's raw claim (looked up by score) as faint context.
   const hasCalibrated = (calibratedItems?.length ?? 0) > 0;
   const rawByScore = new Map(items.map((s) => [s.score, s.probability]));
-  const top = (hasCalibrated ? calibratedItems! : items)
+  // Sort a copy first, then take the top 3 — the backend list may be longer
+  // than 3 or arrive unsorted, and the input arrays must not be mutated.
+  const top = [...(hasCalibrated ? calibratedItems! : items)]
+    .sort((a, b) => b.probability - a.probability)
     .slice(0, 3)
     .map((s) => ({
       score: s.score,
       probability: s.probability,
       rawProbability: hasCalibrated ? (rawByScore.get(s.score) ?? null) : null,
-    }))
-    .sort((a, b) => b.probability - a.probability);
+    }));
   const max = Math.max(...top.map((s) => s.probability), 1);
 
   // Grow the bars in from 0 on mount for a subtle reveal.

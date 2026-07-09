@@ -61,4 +61,24 @@ describe('LikelyScorelines', () => {
     // 2-0 from the AI list is displaced entirely by the blend.
     expect(screen.queryByText('2 : 0')).not.toBeInTheDocument();
   });
+
+  it('sorts before slicing so an unsorted or longer list still shows the true top-3', () => {
+    const calibratedItems = [
+      { score: '2-1', probability: 10 },
+      { score: '0-0', probability: 9 },
+      { score: '1-1', probability: 18 }, // true leader arrives last
+      { score: '1-0', probability: 15 },
+    ];
+    renderWithProviders(
+      <LikelyScorelines items={rawItems} calibratedItems={calibratedItems} />,
+    );
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent('1 : 1');
+    expect(rows[1]).toHaveTextContent('1 : 0');
+    expect(rows[2]).toHaveTextContent('2 : 1');
+    expect(screen.queryByText('0 : 0')).not.toBeInTheDocument();
+    // The input array is not mutated by the sort.
+    expect(calibratedItems[0].score).toBe('2-1');
+  });
 });

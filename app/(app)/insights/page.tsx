@@ -390,10 +390,11 @@ function OutcomeRow({ item }: { item: PredictionOutcomeItem }) {
       <td className="px-4 py-3 text-slate-800">{topScoreline}</td>
       <td className="px-4 py-3 whitespace-nowrap text-slate-800">
         {topProgramScoreline ?? <span className="text-slate-400">—</span>}
-        {item.programExactScoreHit && (
+        {/* Strict checks: null/undefined = program result not settled → no badge. */}
+        {item.programExactScoreHit === true && (
           <span className="ml-1 text-xs font-medium text-green-700">全中</span>
         )}
-        {!item.programExactScoreHit && item.programTop3ScoreHit && (
+        {item.programExactScoreHit === false && item.programTop3ScoreHit === true && (
           <span className="ml-1 text-xs font-medium text-brand-700">前三</span>
         )}
       </td>
