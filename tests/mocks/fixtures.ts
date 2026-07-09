@@ -360,4 +360,19 @@ export const matchPredictionFixture: MatchPrediction = {
   riskNotes: ['關鍵中場可能缺陣'],
   report: null,
   sourceUpdatedAt: '2026-07-01T00:00:00.000Z',
+  calibrated: {
+    method: 'temperature+team-bias',
+    homeWinProbability: 42.1,
+    drawProbability: 29.4,
+    awayWinProbability: 28.5,
+    temperature: 1.24,
+    sampleSize: 18,
+    homeBiasAdjustment: 0.12,
+    awayBiasAdjustment: null,
+    scorelines: [
+      { score: '2-1', probability: 16.5 },
+      { score: '1-1', probability: 16.3 },
+      { score: '2-0', probability: 11 },
+    ],
+  },
 };

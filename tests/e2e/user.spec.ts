@@ -18,8 +18,10 @@ test.describe('USER', () => {
   test('shows elimination status on the teams list', async ({ page }) => {
     await loginAs(page, 'user');
     await page.goto('/teams');
-    // The mock backend marks Argentina as eliminated.
-    await expect(page.getByText('已淘汰').first()).toBeVisible();
+    // The mock backend marks Argentina as eliminated. Target the card badge
+    // (a span) — the 狀態 filter's <option>已淘汰</option> also matches by
+    // text but is never "visible".
+    await expect(page.locator('span', { hasText: '已淘汰' }).first()).toBeVisible();
   });
 
   test('can ask the floating chat and get an answer', async ({ page }) => {

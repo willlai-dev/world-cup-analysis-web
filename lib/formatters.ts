@@ -157,8 +157,8 @@ export function teamName(team: { nameZh?: string | null; nameEn: string }): stri
   return team.nameZh?.trim() || team.nameEn;
 }
 
-// "已淘汰" vs "仍在賽". Deliberately not "已晉級" — group-stage elimination is not
-// yet reflected by the backend, so false only means "not yet eliminated".
+// "已淘汰" covers both knockout losses and group-stage exits (backend derives
+// the full set from the match table). "仍在賽" = still alive in the tournament.
 export function eliminationLabel(isEliminated?: boolean): string {
   return isEliminated ? '已淘汰' : '仍在賽';
 }
