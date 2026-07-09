@@ -327,7 +327,10 @@ type MatchPredictionDto = {
     sampleSize: number;
     homeBiasAdjustment?: number | null; // applied log-odds shift; null when 0
     awayBiasAdjustment?: number | null;
-    // likelyScorelines re-scaled to agree with the calibrated 1X2 above.
+    // Program-blend scorelines: the AI's recalibrated top-3 blended with a
+    // Poisson score grid fitted to the calibrated 1X2, re-ranked top-3 — may
+    // contain scores the AI never listed. Consistent with the calibrated
+    // probabilities above (per-tendency-bucket capped).
     scorelines?: { score: string; probability: number }[] | null;
   } | null;
 };

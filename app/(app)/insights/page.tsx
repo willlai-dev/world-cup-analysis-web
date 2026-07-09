@@ -81,6 +81,17 @@ export default function InsightsPage() {
             )}
           </section>
 
+          {(data.summary.real.programTotal ?? 0) > 0 && (
+            <section>
+              <h2 className="mb-1 text-lg font-bold text-slate-900">比分預測對比：AI 原始 vs 程式混合</h2>
+              <p className="mb-4 text-sm text-slate-500">
+                「程式混合」以 Poisson 進球模型與 AI 比分加權混合後重排前三比分（權重依歷史命中自動擬合）。
+                滾動參數回測，僅計真實賽前預測。
+              </p>
+              <ScoreComparisonTiles bucket={data.summary.real} />
+            </section>
+          )}
+
           {data.calibration && data.calibration.temperature != null && (
             <section>
               <h2 className="mb-1 text-lg font-bold text-slate-900">機率校正</h2>
@@ -228,6 +239,7 @@ export default function InsightsPage() {
                         <th className="px-4 py-3 font-medium">輪次</th>
                         <th className="px-4 py-3 font-medium">預測傾向</th>
                         <th className="px-4 py-3 font-medium">預測比分</th>
+                        <th className="px-4 py-3 font-medium">程式比分</th>
                         <th className="px-4 py-3 font-medium">實際</th>
                         <th className="px-4 py-3 font-medium">命中</th>
                         <th className="px-4 py-3 text-right font-medium">Brier</th>
@@ -246,6 +258,46 @@ export default function InsightsPage() {
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+// AI-raw vs program-blend scoreline hit rates, side by side (real samples only).
+function ScoreComparisonTiles({ bucket }: { bucket: PredictionInsightsBucket }) {
+  const programTotal = bucket.programTotal ?? 0;
+  const tiles = [
+    {
+      label: 'AI 比分完全命中',
+      value: formatPercent(bucket.exactScoreHitRate),
+      hint: `${bucket.exactScoreHits}/${bucket.total} 場`,
+    },
+    {
+      label: '程式混合完全命中',
+      value: formatPercent(bucket.programExactScoreHitRate ?? null),
+      hint: `${bucket.programExactScoreHits ?? 0}/${programTotal} 場（回測）`,
+    },
+    {
+      label: 'AI 前三比分命中',
+      value: formatPercent(bucket.top3ScoreHitRate),
+      hint: `${bucket.top3ScoreHits}/${bucket.total} 場`,
+    },
+    {
+      label: '程式混合前三命中',
+      value: formatPercent(bucket.programTop3ScoreHitRate ?? null),
+      hint: `${bucket.programTop3ScoreHits ?? 0}/${programTotal} 場（回測）`,
+    },
+  ];
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {tiles.map((t) => (
+        <Card key={t.label}>
+          <CardBody>
+            <p className="text-xs text-slate-500">{t.label}</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{t.value}</p>
+            <p className="mt-0.5 text-xs text-slate-400">{t.hint}</p>
+          </CardBody>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -313,6 +365,7 @@ function BucketTiles({ bucket, muted = false }: { bucket: PredictionInsightsBuck
 
 function OutcomeRow({ item }: { item: PredictionOutcomeItem }) {
   const topScoreline = item.likelyScorelines[0]?.score ?? '—';
+  const topProgramScoreline = item.programScorelines?.[0]?.score ?? null;
   return (
     <tr className="border-b border-slate-100 last:border-0">
       <td className="px-4 py-3">
@@ -335,6 +388,15 @@ function OutcomeRow({ item }: { item: PredictionOutcomeItem }) {
         )}
       </td>
       <td className="px-4 py-3 text-slate-800">{topScoreline}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-slate-800">
+        {topProgramScoreline ?? <span className="text-slate-400">—</span>}
+        {item.programExactScoreHit && (
+          <span className="ml-1 text-xs font-medium text-green-700">全中</span>
+        )}
+        {!item.programExactScoreHit && item.programTop3ScoreHit && (
+          <span className="ml-1 text-xs font-medium text-brand-700">前三</span>
+        )}
+      </td>
       <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
         {item.actualHomeScore} - {item.actualAwayScore}
         <span className="ml-1 text-xs font-normal text-slate-400">

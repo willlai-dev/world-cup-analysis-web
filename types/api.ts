@@ -509,6 +509,14 @@ export type PredictionInsightsBucket = {
   top3ScoreHitRate: number | null;
   // Mean multi-class Brier (0 best, 2 worst); null when no scored leans.
   avgBrier: number | null;
+  // Program-blend (Poisson × AI) scoreline A/B — rows carrying program metrics
+  // (rolling-parameter backtest). Rates over programTotal. Optional: absent on
+  // older backends — render defensively.
+  programTotal?: number;
+  programExactScoreHits?: number;
+  programExactScoreHitRate?: number | null;
+  programTop3ScoreHits?: number;
+  programTop3ScoreHitRate?: number | null;
 };
 
 // One settled prediction (prediction snapshot vs the final score).
@@ -533,6 +541,11 @@ export type PredictionOutcomeItem = {
   exactScoreHit: boolean;
   top3ScoreHit: boolean;
   brierScore: number | null;
+  // Program-blend scorelines settled alongside the AI list; null when the
+  // snapshot's leans were unusable. Optional: absent on older backends.
+  programScorelines?: LikelyScoreline[] | null;
+  programExactScoreHit?: boolean | null;
+  programTop3ScoreHit?: boolean | null;
 };
 
 // Per-team predicted-vs-actual bias (program rules; includes retro rows, counted).
