@@ -432,7 +432,7 @@ POST /news/:newsId/deep-chat
 Query: `page`, `pageSize`, `category`, `tag`, `teamId`, `playerId`, `sourceName`, `dateFrom`, `dateTo`.
 
 - `GET /news` returns `NewsSummary[]`.
-- `GET /news/:newsId` returns `NewsSummary` plus optional `contentSnippet`, `translatedContentZh`, and `relatedEntities` fields.
+- `GET /news/:newsId` returns `NewsSummary` plus optional `contentSnippet`, `contentEn` (full plain-text original body when the source provides one; Guardian only), `translatedContentZh`, and `relatedEntities` fields.
 - `POST /news/:newsId/translate` is PREMIUM only and returns `{ translatedContentZh: string; provider: 'QWEN' | 'NVIDIA'; model?: string | null }`.
 - `POST /news/:newsId/deep-chat` is PREMIUM only and returns `ChatAnswer`.
 

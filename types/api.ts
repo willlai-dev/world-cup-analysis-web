@@ -277,9 +277,11 @@ export type NewsSummary = {
   aiSummaryStatus?: AiReportStatus;
 };
 
-// NewsDetailDto = NewsSummary & { contentSnippet, translatedContentZh, language, fetchedAt }.
+// NewsDetailDto = NewsSummary & { contentSnippet, contentEn, translatedContentZh, language, fetchedAt }.
 export type NewsDetail = NewsSummary & {
   contentSnippet: string | null;
+  /** Full plain-text original body when the source provides one (Guardian). */
+  contentEn?: string | null;
   translatedContentZh: string | null;
   language: string | null;
   fetchedAt: string | null;

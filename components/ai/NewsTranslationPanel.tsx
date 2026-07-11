@@ -21,6 +21,8 @@ export function NewsTranslationPanel({ news }: { news: NewsDetail }) {
   // Prefer the freshly returned detail so the panel reflects the result even
   // before the parent re-renders from the seeded query cache.
   const current = translate.data ?? news;
+  // 原文 prefers the stored full body (Guardian) over the trail snippet.
+  const original = current.contentEn ?? current.contentSnippet;
   const hasTranslation =
     current.translationStatus === 'DONE' && !!current.translatedContentZh?.trim();
   const serverFailed = current.translationStatus === 'FAILED';
@@ -54,7 +56,7 @@ export function NewsTranslationPanel({ news }: { news: NewsDetail }) {
             )
           ) : hasTranslation ? (
             <div className="flex flex-col gap-2">
-              {current.contentSnippet && (
+              {original && (
                 <div className="flex gap-1" role="tablist" aria-label="原文譯文切換">
                   <ToggleButton active={!showOriginal} onClick={() => setShowOriginal(false)}>
                     看譯文
@@ -68,7 +70,7 @@ export function NewsTranslationPanel({ news }: { news: NewsDetail }) {
                 data-testid={showOriginal ? 'original-content' : 'translated-content'}
                 className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700"
               >
-                {showOriginal ? current.contentSnippet : current.translatedContentZh}
+                {showOriginal ? original : current.translatedContentZh}
               </p>
             </div>
           ) : serverFailed ? (
