@@ -5,7 +5,7 @@ export function cn(...values: ClassValue[]): string {
   return values.filter(Boolean).join(' ');
 }
 
-// "hongde1590@gmail.com" -> "h***@gmail.com" — shown on the verify-email page.
+// "user@example.com" -> "u***@example.com" — shown on the verify-email page.
 export function maskEmail(email: string): string {
   const at = email.indexOf('@');
   if (at <= 0) return '***';
