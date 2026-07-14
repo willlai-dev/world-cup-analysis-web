@@ -9,6 +9,7 @@ import { registerSchema, type RegisterFormValues } from '@/features/auth/auth-sc
 import { routes } from '@/lib/routes';
 import { ApiError } from '@/lib/api-client';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
 
 export function RegisterForm() {
@@ -40,16 +41,14 @@ export function RegisterForm() {
         {...register('email')}
       />
       <Input label="顯示名稱" error={errors.displayName?.message} {...register('displayName')} />
-      <Input
+      <PasswordInput
         label="密碼"
-        type="password"
         autoComplete="new-password"
         error={errors.password?.message}
         {...register('password')}
       />
-      <Input
+      <PasswordInput
         label="確認密碼"
-        type="password"
         autoComplete="new-password"
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}

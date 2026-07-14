@@ -12,7 +12,7 @@ import {
 } from '@/features/auth/auth-schemas';
 import { ApiError } from '@/lib/api-client';
 import { routes } from '@/lib/routes';
-import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
 
 const TOKEN_ERROR_CODES = new Set([
@@ -64,16 +64,14 @@ export function ResetPasswordForm({ token }: { token?: string }) {
 
   return (
     <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4" noValidate>
-      <Input
+      <PasswordInput
         label="新密碼"
-        type="password"
         autoComplete="new-password"
         error={errors.newPassword?.message}
         {...register('newPassword')}
       />
-      <Input
+      <PasswordInput
         label="確認新密碼"
-        type="password"
         autoComplete="new-password"
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}
