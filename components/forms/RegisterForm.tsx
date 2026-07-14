@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { register as registerUser } from '@/features/auth/auth-api';
 import { registerSchema, type RegisterFormValues } from '@/features/auth/auth-schemas';
+import { stashPendingVerificationEmail } from '@/features/auth/pending-verification';
 import { routes } from '@/lib/routes';
 import { ApiError } from '@/lib/api-client';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
 
 export function RegisterForm() {
@@ -24,8 +26,11 @@ export function RegisterForm() {
     // New accounts always default to USER server-side; role is never selectable here.
     mutationFn: ({ email, displayName, password }: RegisterFormValues) =>
       registerUser({ email, displayName, password }),
-    onSuccess: () => {
-      router.replace(`${routes.login}?registered=1`);
+    onSuccess: (_data, variables) => {
+      // The account starts unverified — a verification mail is on its way.
+      // The email travels via sessionStorage, never the URL (PII in history/logs).
+      stashPendingVerificationEmail(variables.email);
+      router.replace(routes.verifyEmail);
     },
   });
 
@@ -39,16 +44,14 @@ export function RegisterForm() {
         {...register('email')}
       />
       <Input label="顯示名稱" error={errors.displayName?.message} {...register('displayName')} />
-      <Input
+      <PasswordInput
         label="密碼"
-        type="password"
         autoComplete="new-password"
         error={errors.password?.message}
         {...register('password')}
       />
-      <Input
+      <PasswordInput
         label="確認密碼"
-        type="password"
         autoComplete="new-password"
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}

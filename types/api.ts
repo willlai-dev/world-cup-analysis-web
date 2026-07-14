@@ -86,6 +86,8 @@ export type User = {
   displayName: string;
   role: UserRole;
   status: UserStatus;
+  // Optional; when present, false until the registration email-verification link is consumed.
+  emailVerified?: boolean;
   // NOTE: backend UserDto does NOT include createdAt today. Kept optional and
   // null-safe so the admin table column degrades to "—" rather than depending on it.
   createdAt?: string | null;
@@ -451,6 +453,15 @@ export type LoginResponse = {
   redirectPath: string;
 };
 
+export type RegisterResponse = {
+  user: User;
+  // Always true for self-registration — the account starts unverified.
+  requiresEmailVerification: boolean;
+};
+
+// verify-email / resend-verification / forgot-password / reset-password.
+export type AuthActionResponse = { success: boolean; message: string };
+
 // ----- Request payloads (only contract-whitelisted fields) -----
 
 export type RegisterRequest = {
@@ -460,6 +471,12 @@ export type RegisterRequest = {
 };
 
 export type LoginRequest = { email: string; password: string };
+
+export type ResetPasswordRequest = {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+};
 
 export type UpdateMeRequest = {
   displayName?: string;
