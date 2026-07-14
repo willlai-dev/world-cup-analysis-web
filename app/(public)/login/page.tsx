@@ -9,13 +9,20 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ registered?: string; verified?: string; reset?: string }>;
 }) {
   // Already-authenticated users never see the login form.
   const user = await getServerUser();
   if (user) redirect(ROLE_HOME[user.role]);
 
-  const { registered } = await searchParams;
+  const { registered, verified, reset } = await searchParams;
+  const banner = verified
+    ? 'Email 驗證成功，請登入。'
+    : reset
+      ? '密碼已重設成功，請使用新密碼登入。'
+      : registered
+        ? '註冊成功，請使用您的帳號登入。'
+        : null;
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-12">
@@ -24,9 +31,9 @@ export default async function LoginPage({
           <CardTitle>登入</CardTitle>
         </CardHeader>
         <CardBody>
-          {registered && (
+          {banner && (
             <p className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              註冊成功，請使用您的帳號登入。
+              {banner}
             </p>
           )}
           <LoginForm />

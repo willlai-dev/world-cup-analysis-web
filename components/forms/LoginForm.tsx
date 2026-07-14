@@ -5,11 +5,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { login } from '@/features/auth/auth-api';
 import { loginSchema, type LoginFormValues } from '@/features/auth/auth-schemas';
 import { useAuthStore } from '@/features/auth/auth-store';
 import { ROLE_HOME } from '@/lib/constants';
 import { ApiError } from '@/lib/api-client';
+import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -59,6 +61,12 @@ export function LoginForm() {
       const target = data.redirectPath ?? ROLE_HOME[data.user.role];
       router.replace(target);
       router.refresh();
+    },
+    onError: (error, variables) => {
+      // Correct credentials but unverified email — send them to the verify page.
+      if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {
+        router.replace(`${routes.verifyEmail}?email=${encodeURIComponent(variables.email)}`);
+      }
     },
   });
 
@@ -122,9 +130,22 @@ export function LoginForm() {
 
       {mutation.error instanceof ApiError && (
         <p role="alert" className="text-sm text-red-600">
-          {mutation.error.isUnauthorized ? '電子郵件或密碼不正確。' : mutation.error.message}
+          {mutation.error.code === 'EMAIL_NOT_VERIFIED'
+            ? 'Email 尚未完成驗證，正在前往驗證頁…'
+            : mutation.error.isUnauthorized
+              ? '電子郵件或密碼不正確。'
+              : mutation.error.message}
         </p>
       )}
+
+      <div className="flex justify-end">
+        <Link
+          href={routes.forgotPassword}
+          className="text-sm font-medium text-brand-700 hover:underline"
+        >
+          忘記密碼？
+        </Link>
+      </div>
 
       <Button type="submit" isLoading={mutation.isPending} className="w-full">
         登入

@@ -4,6 +4,9 @@ export const routes = {
   home: '/',
   login: '/login',
   register: '/register',
+  verifyEmail: '/verify-email',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
   matches: '/matches',
   match: (id: string) => `/matches/${id}`,
   teams: '/teams',
@@ -25,7 +28,14 @@ export const routes = {
   },
 } as const;
 
-export const PUBLIC_ROUTES = ['/', '/login', '/register'];
+export const PUBLIC_ROUTES = [
+  '/',
+  '/login',
+  '/register',
+  '/verify-email',
+  '/forgot-password',
+  '/reset-password',
+];
 
 export const ADMIN_ROUTE_PREFIX = '/admin';
 

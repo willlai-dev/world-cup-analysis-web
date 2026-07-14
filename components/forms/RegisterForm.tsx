@@ -24,8 +24,9 @@ export function RegisterForm() {
     // New accounts always default to USER server-side; role is never selectable here.
     mutationFn: ({ email, displayName, password }: RegisterFormValues) =>
       registerUser({ email, displayName, password }),
-    onSuccess: () => {
-      router.replace(`${routes.login}?registered=1`);
+    onSuccess: (_data, variables) => {
+      // The account starts unverified — a verification mail is on its way.
+      router.replace(`${routes.verifyEmail}?email=${encodeURIComponent(variables.email)}`);
     },
   });
 

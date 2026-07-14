@@ -32,6 +32,24 @@ export const registerSchema = z
 
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, '請輸入電子郵件').email('電子郵件格式不正確'),
+});
+
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    newPassword: passwordField,
+    confirmPassword: z.string().min(1, '請再次輸入密碼'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: '兩次輸入的密碼不一致',
+    path: ['confirmPassword'],
+  });
+
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
 export const adminCreateUserSchema = z.object({
   email: z.string().min(1, '請輸入電子郵件').email('電子郵件格式不正確'),
   displayName: displayNameField,
