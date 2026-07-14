@@ -86,7 +86,7 @@ export type User = {
   displayName: string;
   role: UserRole;
   status: UserStatus;
-  // false until the registration email-verification link is consumed.
+  // Optional; when present, false until the registration email-verification link is consumed.
   emailVerified?: boolean;
   // NOTE: backend UserDto does NOT include createdAt today. Kept optional and
   // null-safe so the admin table column degrades to "—" rather than depending on it.
