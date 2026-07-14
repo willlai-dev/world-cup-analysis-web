@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { login } from '@/features/auth/auth-api';
 import { loginSchema, type LoginFormValues } from '@/features/auth/auth-schemas';
+import { stashPendingVerificationEmail } from '@/features/auth/pending-verification';
 import { useAuthStore } from '@/features/auth/auth-store';
 import { ROLE_HOME } from '@/lib/constants';
 import { ApiError } from '@/lib/api-client';
@@ -39,8 +40,10 @@ export function LoginForm() {
     },
     onError: (error, variables) => {
       // Correct credentials but unverified email — send them to the verify page.
+      // The email travels via sessionStorage, never the URL (PII in history/logs).
       if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {
-        router.replace(`${routes.verifyEmail}?email=${encodeURIComponent(variables.email)}`);
+        stashPendingVerificationEmail(variables.email);
+        router.replace(routes.verifyEmail);
       }
     },
   });

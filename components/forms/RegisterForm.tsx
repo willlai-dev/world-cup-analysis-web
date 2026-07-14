@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { register as registerUser } from '@/features/auth/auth-api';
 import { registerSchema, type RegisterFormValues } from '@/features/auth/auth-schemas';
+import { stashPendingVerificationEmail } from '@/features/auth/pending-verification';
 import { routes } from '@/lib/routes';
 import { ApiError } from '@/lib/api-client';
 import { Input } from '@/components/ui/Input';
@@ -27,7 +28,9 @@ export function RegisterForm() {
       registerUser({ email, displayName, password }),
     onSuccess: (_data, variables) => {
       // The account starts unverified — a verification mail is on its way.
-      router.replace(`${routes.verifyEmail}?email=${encodeURIComponent(variables.email)}`);
+      // The email travels via sessionStorage, never the URL (PII in history/logs).
+      stashPendingVerificationEmail(variables.email);
+      router.replace(routes.verifyEmail);
     },
   });
 
